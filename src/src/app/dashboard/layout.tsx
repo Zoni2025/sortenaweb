@@ -56,27 +56,35 @@ export default function DashboardLayout({
           .single()
 
         if (data) {
+          // Verificar se o usuário está aprovado (admin sempre passa)
+          if (data.role !== 'admin' && data.subscription_status !== 'active') {
+            await supabase.auth.signOut()
+            router.push('/auth/login')
+            return
+          }
           setProfile(data as UserProfile)
           setIsAdmin(data.role === 'admin')
         } else {
-          // Fallback: montar perfil básico do auth
-          setProfile({
-            id: user.id,
-            full_name: user.user_metadata?.full_name || null,
-            email: user.email || '',
-            avatar_url: null,
-            subscription_status: 'active',
-            role: 'user',
-            created_at: user.created_at,
-            updated_at: user.created_at,
-          })
-          console.error('Erro ao carregar perfil:', error)
-        }
-
-        // Verificar admin via RPC (não depende de RLS)
-        const { data: adminCheck } = await supabase.rpc('is_admin')
-        if (adminCheck === true) {
-          setIsAdmin(true)
+          // Se não conseguiu ler o perfil, verificar via RPC se é admin
+          const { data: adminCheck } = await supabase.rpc('is_admin')
+          if (adminCheck === true) {
+            setIsAdmin(true)
+            setProfile({
+              id: user.id,
+              full_name: user.user_metadata?.full_name || null,
+              email: user.email || '',
+              avatar_url: null,
+              subscription_status: 'active',
+              role: 'admin',
+              created_at: user.created_at,
+              updated_at: user.created_at,
+            })
+          } else {
+            // Não é admin e não conseguiu ler perfil → bloquear
+            await supabase.auth.signOut()
+            router.push('/auth/login')
+            return
+          }
         }
       } catch (err) {
         console.error('Erro inesperado:', err)
