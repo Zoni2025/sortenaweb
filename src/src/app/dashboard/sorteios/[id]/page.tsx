@@ -302,7 +302,7 @@ export default function SorteioDetailPage() {
                     Data do Sorteio
                   </label>
                   <p className="text-gray-300 mt-1">
-                    {new Date(sorteio.draw_date).toLocaleDateString('pt-BR', {
+                    {new Date(sorteio.draw_date).toLocaleString('pt-BR', {
                       dateStyle: 'long',
                       timeStyle: 'short',
                     })}
@@ -457,7 +457,7 @@ export default function SorteioDetailPage() {
                       </div>
                       <p className="text-sm text-gray-400 mb-2">Prêmio: {ganhador.premio?.name}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(ganhador.created_at).toLocaleDateString('pt-BR', {
+                        {new Date(ganhador.created_at).toLocaleString('pt-BR', {
                           dateStyle: 'long',
                           timeStyle: 'short',
                         })}

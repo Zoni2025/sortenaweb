@@ -60,13 +60,14 @@ export default function NewSorteioPage() {
         return
       }
 
+      const uniqueSlug = generatedSlug + '-' + Date.now().toString(36)
       const { data, error: insertError } = await supabase
         .from('sorteios')
         .insert({
           user_id: user.id,
           title: formData.title.trim(),
           description: formData.description.trim() || null,
-          slug: generatedSlug,
+          slug: uniqueSlug,
           status: 'draft',
           draw_date: formData.draw_date || null,
           max_participants: formData.max_participants ? parseInt(formData.max_participants) : null,
@@ -77,7 +78,7 @@ export default function NewSorteioPage() {
       if (insertError) throw insertError
 
       if (data && data[0]) {
-        router.push(`/dashboard/sorteios/${data[0].id}`)
+        router.push('/dashboard/sorteios')
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao criar sorteio'

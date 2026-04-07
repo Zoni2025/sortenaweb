@@ -51,24 +51,29 @@ export default function AdminUsersPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return router.push('/auth/login')
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'admin') {
+    try {
+      const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin')
+      if (isAdminError || !isAdminData) {
+        return router.push('/dashboard')
+      }
+    } catch (err) {
+      console.error('Error checking admin status:', err)
       return router.push('/dashboard')
     }
 
     // Carregar todos os usuários
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error: queryError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (data) {
-      setUsers(data as Profile[])
+      if (queryError) throw queryError
+      if (data) {
+        setUsers(data as Profile[])
+      }
+    } catch (err) {
+      console.error('Error loading users:', err)
     }
     setLoading(false)
   }

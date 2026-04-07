@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import type { Profile } from '@/lib/types'
 import {
   LayoutDashboard,
   Trophy,
@@ -16,12 +15,24 @@ import {
   Shield,
 } from 'lucide-react'
 
+interface UserProfile {
+  id: string
+  full_name: string | null
+  email: string
+  avatar_url: string | null
+  subscription_status: string
+  role: string
+  created_at: string
+  updated_at: string
+}
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -30,19 +41,46 @@ export default function DashboardLayout({
 
   useEffect(() => {
     async function loadProfile() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/auth/login')
-        return
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
+
+        // Carregar perfil
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, avatar_url, subscription_status, role, created_at, updated_at')
+          .eq('id', user.id)
+          .single()
+
+        if (data) {
+          setProfile(data as UserProfile)
+          setIsAdmin(data.role === 'admin')
+        } else {
+          // Fallback: montar perfil básico do auth
+          setProfile({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || null,
+            email: user.email || '',
+            avatar_url: null,
+            subscription_status: 'active',
+            role: 'user',
+            created_at: user.created_at,
+            updated_at: user.created_at,
+          })
+          console.error('Erro ao carregar perfil:', error)
+        }
+
+        // Verificar admin via RPC (não depende de RLS)
+        const { data: adminCheck } = await supabase.rpc('is_admin')
+        if (adminCheck === true) {
+          setIsAdmin(true)
+        }
+      } catch (err) {
+        console.error('Erro inesperado:', err)
       }
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (data) setProfile(data as Profile)
       setLoading(false)
     }
     loadProfile()
@@ -52,14 +90,6 @@ export default function DashboardLayout({
     await supabase.auth.signOut()
     router.push('/')
   }
-
-  const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/dashboard/sorteios', label: 'Meus Sorteios', icon: Trophy },
-    ...(profile?.role === 'admin'
-      ? [{ href: '/dashboard/admin/users', label: 'Gerenciar Usuários', icon: Shield }]
-      : []),
-  ]
 
   if (loading) {
     return (
@@ -104,36 +134,74 @@ export default function DashboardLayout({
 
             {/* Nav */}
             <nav className="flex-1 p-4 space-y-1">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href
-                return (
+              <Link
+                href="/dashboard"
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  pathname === '/dashboard'
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                }`}
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                Dashboard
+              </Link>
+
+              <Link
+                href="/dashboard/sorteios"
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  pathname?.startsWith('/dashboard/sorteios')
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                }`}
+              >
+                <Trophy className="w-5 h-5" />
+                Meus Sorteios
+              </Link>
+
+              {isAdmin && (
+                <>
+                  <div className="pt-4 pb-2 px-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</p>
+                  </div>
                   <Link
-                    key={item.href}
-                    href={item.href}
+                    href="/dashboard/admin/users"
                     onClick={() => setSidebarOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                      isActive
-                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      pathname?.startsWith('/dashboard/admin')
+                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
                         : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                     }`}
                   >
-                    <item.icon className="w-5 h-5" />
-                    {item.label}
+                    <Shield className="w-5 h-5" />
+                    Gerenciar Usuários
                   </Link>
-                )
-              })}
+                </>
+              )}
             </nav>
 
             {/* User info */}
             <div className="p-4 border-t border-gray-800">
               <div className="flex items-center gap-3 mb-3 px-2">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                  isAdmin
+                    ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                }`}>
                   <User className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {profile?.full_name || 'Usuário'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">
+                      {profile?.full_name || 'Usuário'}
+                    </p>
+                    {isAdmin && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-yellow-500/20 text-yellow-400 font-bold">
+                        ADMIN
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 truncate">{profile?.email}</p>
                 </div>
               </div>
