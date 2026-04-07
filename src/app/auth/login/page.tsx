@@ -150,10 +150,16 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6">
+          <div className="mt-6 text-center space-y-2">
+            <p className="text-gray-400 text-sm">
+              Não tem uma conta?{' '}
+              <Link href="/auth/register" className="text-purple-400 hover:text-purple-300 font-semibold transition">
+                Criar conta
+              </Link>
+            </p>
             <Link
               href="/"
-              className="block text-center text-gray-400 hover:text-gray-300 text-sm transition"
+              className="block text-gray-500 hover:text-gray-400 text-xs transition"
             >
               Voltar para o site
             </Link>
