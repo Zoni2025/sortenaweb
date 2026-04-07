@@ -14,6 +14,7 @@ import {
   UserCheck,
   UserX,
   Crown,
+  Trash2,
 } from 'lucide-react'
 
 export default function AdminUsersPage() {
@@ -91,6 +92,30 @@ export default function AdminUsersPage() {
           u.id === userId ? { ...u, subscription_status: status } : u
         )
       )
+    }
+    setActionLoading(null)
+  }
+
+  async function deleteUser(userId: string, email: string) {
+    if (!confirm(`Tem certeza que deseja excluir o usuário ${email}? Esta ação não pode ser desfeita.`)) return
+
+    setActionLoading(userId + '-delete')
+    try {
+      const res = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+
+      if (res.ok) {
+        setUsers((prev) => prev.filter((u) => u.id !== userId))
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Erro ao excluir usuário')
+      }
+    } catch (err) {
+      console.error('Error deleting user:', err)
+      alert('Erro ao excluir usuário')
     }
     setActionLoading(null)
   }
@@ -286,6 +311,20 @@ export default function AdminUsersPage() {
                     >
                       <Crown className="w-4 h-4" />
                       {user.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
+                    </button>
+
+                    <button
+                      onClick={() => deleteUser(user.id, user.email)}
+                      disabled={actionLoading === user.id + '-delete'}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-800/50 text-sm font-medium transition-all disabled:opacity-50"
+                      title="Excluir usuário"
+                    >
+                      {actionLoading === user.id + '-delete' ? (
+                        <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      Excluir
                     </button>
                   </div>
                 </div>

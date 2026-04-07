@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
+import { Sparkles, Clock } from 'lucide-react'
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
@@ -18,15 +19,13 @@ export default function RegisterPage() {
     setError(null)
     setSuccess(false)
 
-    // Validate passwords match
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('As senhas não coincidem')
       return
     }
 
-    // Validate password strength
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError('A senha deve ter pelo menos 6 caracteres')
       return
     }
 
@@ -35,7 +34,6 @@ export default function RegisterPage() {
     try {
       const supabase = createClient()
 
-      // Sign up with Supabase
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -51,19 +49,13 @@ export default function RegisterPage() {
         return
       }
 
-      // Success
       setSuccess(true)
       setName('')
       setEmail('')
       setPassword('')
       setConfirmPassword('')
-
-      // Auto redirect after 3 seconds
-      setTimeout(() => {
-        window.location.href = '/auth/login'
-      }, 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro')
     } finally {
       setLoading(false)
     }
@@ -71,7 +63,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
@@ -79,25 +70,21 @@ export default function RegisterPage() {
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Glass effect card */}
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-orange-400 bg-clip-text text-transparent mb-2">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-orange-400 bg-clip-text text-transparent mb-2">
               Sortenaweb
             </h1>
-            <p className="text-gray-300">Join the excitement</p>
+            <p className="text-gray-300">Crie sua conta</p>
           </div>
 
-          {/* Success message */}
-          {success && (
-            <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
-              <p className="text-green-200 text-sm font-medium mb-2">Account created successfully!</p>
-              <p className="text-green-200 text-xs">Redirecting to login...</p>
-            </div>
-          )}
-
-          {/* Error message */}
+          {/* Error */}
           {error && !success && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
               <p className="text-red-200 text-sm">{error}</p>
@@ -106,11 +93,10 @@ export default function RegisterPage() {
 
           {!success ? (
             <>
-              {/* Form */}
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-200 mb-2">
-                    Full Name
+                    Nome Completo
                   </label>
                   <input
                     id="name"
@@ -119,7 +105,7 @@ export default function RegisterPage() {
                     onChange={(e) => setName(e.target.value)}
                     required
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
-                    placeholder="John Doe"
+                    placeholder="Seu nome completo"
                   />
                 </div>
 
@@ -134,13 +120,13 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
-                    placeholder="you@example.com"
+                    placeholder="seu@email.com"
                   />
                 </div>
 
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-2">
-                    Password
+                    Senha
                   </label>
                   <input
                     id="password"
@@ -149,13 +135,13 @@ export default function RegisterPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
-                    placeholder="At least 6 characters"
+                    placeholder="Mínimo 6 caracteres"
                   />
                 </div>
 
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-200 mb-2">
-                    Confirm Password
+                    Confirmar Senha
                   </label>
                   <input
                     id="confirmPassword"
@@ -164,7 +150,7 @@ export default function RegisterPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
-                    placeholder="Confirm your password"
+                    placeholder="Repita a senha"
                   />
                 </div>
 
@@ -179,47 +165,61 @@ export default function RegisterPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Creating account...
+                      Criando conta...
                     </>
                   ) : (
-                    'Create Account'
+                    'Criar Conta'
                   )}
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="my-6 flex items-center gap-4">
                 <div className="flex-1 h-px bg-white/20"></div>
-                <span className="text-gray-400 text-sm">or</span>
+                <span className="text-gray-400 text-sm">ou</span>
                 <div className="flex-1 h-px bg-white/20"></div>
               </div>
 
-              {/* Login link */}
               <p className="text-center text-gray-300">
-                Already have an account?{' '}
+                Já tem uma conta?{' '}
                 <Link
                   href="/auth/login"
                   className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-orange-400 hover:from-pink-300 hover:to-orange-300 font-semibold transition"
                 >
-                  Sign in
+                  Entrar
                 </Link>
               </p>
             </>
           ) : (
+            /* Mensagem de conta criada com pendência de aprovação */
             <div className="text-center">
-              <div className="mb-4 inline-block">
-                <svg className="w-16 h-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center mx-auto mb-6">
+                <Clock className="w-10 h-10 text-yellow-400" />
               </div>
-              <p className="text-gray-300">Welcome to Sortenaweb!</p>
+
+              <h2 className="text-xl font-bold text-white mb-3">Conta Criada com Sucesso!</h2>
+
+              <p className="text-gray-300 mb-4 leading-relaxed">
+                Seu acesso ao serviço de sorteios está <span className="text-yellow-400 font-semibold">pendente de liberação</span> pela empresa Sortenaweb.
+              </p>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
+                <p className="text-yellow-200 text-sm leading-relaxed">
+                  Um administrador da Sortenaweb irá analisar e aprovar sua conta. Você receberá acesso ao painel assim que for liberado. Tente fazer login novamente mais tarde.
+                </p>
+              </div>
+
+              <Link
+                href="/auth/login"
+                className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-lg transition duration-200"
+              >
+                Ir para Login
+              </Link>
             </div>
           )}
         </div>
 
-        {/* Decorative bottom element */}
         <div className="mt-8 text-center">
-          <p className="text-gray-400 text-sm">Start winning with Sortenaweb</p>
+          <p className="text-gray-400 text-sm">Plataforma de sorteios profissionais</p>
         </div>
       </div>
     </div>
