@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
+import { Sparkles, Clock } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -11,28 +12,46 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setPending(false)
     setLoading(true)
 
     try {
       const supabase = createClient()
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (signInError) {
-        setError(signInError.message)
+        setError('Email ou senha inválidos')
         return
+      }
+
+      // Verificar se o usuário está aprovado
+      if (authData.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_status, role')
+          .eq('id', authData.user.id)
+          .single()
+
+        if (profile && profile.role !== 'admin' && profile.subscription_status !== 'active') {
+          // Fazer logout e mostrar mensagem de pendência
+          await supabase.auth.signOut()
+          setPending(true)
+          return
+        }
       }
 
       router.push('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro')
     } finally {
       setLoading(false)
     }
@@ -40,7 +59,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute top-1/2 -left-40 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
@@ -48,24 +66,40 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Glass effect card */}
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
-          {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent mb-2">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent mb-2">
               Sortenaweb
             </h1>
-            <p className="text-gray-300">Welcome back to your raffle</p>
+            <p className="text-gray-300">Acesse sua conta</p>
           </div>
 
-          {/* Error message */}
+          {/* Mensagem de conta pendente */}
+          {pending && (
+            <div className="mb-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-yellow-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Acesso Pendente</h3>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                <p className="text-yellow-200 text-sm leading-relaxed">
+                  Sua conta ainda não foi liberada. O acesso ao serviço de sorteios está pendente de aprovação mediante pagamento da anuidade de <span className="font-bold text-yellow-100">R$ 2.000,00</span>. Entre em contato com a Sortenaweb para mais informações.
+                </p>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
               <p className="text-red-200 text-sm">{error}</p>
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-2">
@@ -78,13 +112,13 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                placeholder="you@example.com"
+                placeholder="seu@email.com"
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-2">
-                Password
+                Senha
               </label>
               <input
                 id="password"
@@ -93,7 +127,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                placeholder="Enter your password"
+                placeholder="Sua senha"
               />
             </div>
 
@@ -108,36 +142,26 @@ export default function LoginPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Signing in...
+                  Entrando...
                 </>
               ) : (
-                'Sign In'
+                'Entrar'
               )}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 h-px bg-white/20"></div>
-            <span className="text-gray-400 text-sm">or</span>
-            <div className="flex-1 h-px bg-white/20"></div>
-          </div>
-
-          {/* Register link */}
-          <p className="text-center text-gray-300">
-            Don't have an account?{' '}
+          <div className="mt-6">
             <Link
-              href="/auth/register"
-              className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-300 hover:to-pink-300 font-semibold transition"
+              href="/"
+              className="block text-center text-gray-400 hover:text-gray-300 text-sm transition"
             >
-              Create one
+              Voltar para o site
             </Link>
-          </p>
+          </div>
         </div>
 
-        {/* Decorative bottom element */}
         <div className="mt-8 text-center">
-          <p className="text-gray-400 text-sm">Ready to raffle? Let's go!</p>
+          <p className="text-gray-400 text-sm">Plataforma de sorteios profissionais</p>
         </div>
       </div>
     </div>

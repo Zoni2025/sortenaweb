@@ -27,10 +27,10 @@ export default function Home() {
             </span>
           </div>
           <Link
-            href="/auth/register"
+            href="/auth/login"
             className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white font-semibold transition-all duration-300"
           >
-            Começar Agora
+            Fazer Login
           </Link>
         </div>
       </nav>
@@ -68,17 +68,11 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Link
-              href="/auth/register"
+              href="/auth/login"
               className="inline-flex items-center justify-center gap-2 px-8 h-14 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white text-lg font-bold transition-all duration-300 group"
             >
-              Comece a Criar Agora
+              Fazer Login
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link
-              href="/auth/login"
-              className="inline-flex items-center justify-center px-8 h-14 rounded-lg border-2 border-white/20 hover:border-white/40 text-white text-lg font-bold transition-all duration-300"
-            >
-              Já Tenho Conta
             </Link>
           </div>
 
@@ -172,10 +166,10 @@ export default function Home() {
               </div>
 
               <Link
-                href="/auth/register"
+                href="/auth/login"
                 className="flex items-center justify-center gap-2 w-full h-12 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white font-bold mb-8 transition-all duration-300 group"
               >
-                Começar Agora
+                Fazer Login
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
 
@@ -218,10 +212,10 @@ export default function Home() {
             Junte-se a milhares de usuários criando sorteios incríveis com o Sortenaweb.
           </p>
           <Link
-            href="/auth/register"
+            href="/auth/login"
             className="inline-flex items-center gap-2 px-8 h-14 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white text-lg font-bold transition-all duration-300 group"
           >
-            Comece Gratuitamente
+            Fazer Login
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
