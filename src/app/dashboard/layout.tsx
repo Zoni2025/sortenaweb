@@ -48,21 +48,35 @@ export default function DashboardLayout({
           return
         }
 
+        // Carregar perfil
         const { data, error } = await supabase
           .from('profiles')
           .select('id, full_name, email, avatar_url, subscription_status, role, created_at, updated_at')
           .eq('id', user.id)
           .single()
 
-        if (error) {
-          console.error('Erro ao carregar perfil:', error)
-          setLoading(false)
-          return
-        }
-
         if (data) {
           setProfile(data as UserProfile)
           setIsAdmin(data.role === 'admin')
+        } else {
+          // Fallback: montar perfil básico do auth
+          setProfile({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || null,
+            email: user.email || '',
+            avatar_url: null,
+            subscription_status: 'active',
+            role: 'user',
+            created_at: user.created_at,
+            updated_at: user.created_at,
+          })
+          console.error('Erro ao carregar perfil:', error)
+        }
+
+        // Verificar admin via RPC (não depende de RLS)
+        const { data: adminCheck } = await supabase.rpc('is_admin')
+        if (adminCheck === true) {
+          setIsAdmin(true)
         }
       } catch (err) {
         console.error('Erro inesperado:', err)
