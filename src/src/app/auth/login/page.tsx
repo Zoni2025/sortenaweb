@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Clock } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -12,16 +12,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setPending(false)
     setLoading(true)
 
     try {
       const supabase = createClient()
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -29,6 +31,22 @@ export default function LoginPage() {
       if (signInError) {
         setError('Email ou senha inválidos')
         return
+      }
+
+      // Verificar se o usuário está aprovado
+      if (authData.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_status, role')
+          .eq('id', authData.user.id)
+          .single()
+
+        if (profile && profile.role !== 'admin' && profile.subscription_status !== 'active') {
+          // Fazer logout e mostrar mensagem de pendência
+          await supabase.auth.signOut()
+          setPending(true)
+          return
+        }
       }
 
       router.push('/dashboard')
@@ -60,6 +78,21 @@ export default function LoginPage() {
             </h1>
             <p className="text-gray-300">Acesse sua conta</p>
           </div>
+
+          {/* Mensagem de conta pendente */}
+          {pending && (
+            <div className="mb-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-yellow-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Acesso Pendente</h3>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                <p className="text-yellow-200 text-sm leading-relaxed">
+                  Sua conta ainda não foi liberada. O acesso ao serviço de sorteios está pendente de aprovação mediante pagamento da anuidade de <span className="font-bold text-yellow-100">R$ 2.000,00</span>. Entre em contato com a Sortenaweb para mais informações.
+                </p>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">

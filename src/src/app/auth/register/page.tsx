@@ -190,7 +190,7 @@ export default function RegisterPage() {
               </p>
             </>
           ) : (
-            /* Mensagem de conta criada com pendência de aprovação */
+            /* Mensagem de conta criada com pendência de pagamento */
             <div className="text-center">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 flex items-center justify-center mx-auto mb-6">
                 <Clock className="w-10 h-10 text-yellow-400" />
@@ -199,12 +199,24 @@ export default function RegisterPage() {
               <h2 className="text-xl font-bold text-white mb-3">Conta Criada com Sucesso!</h2>
 
               <p className="text-gray-300 mb-4 leading-relaxed">
-                Seu acesso ao serviço de sorteios está <span className="text-yellow-400 font-semibold">pendente de liberação</span> pela empresa Sortenaweb.
+                Seu acesso ao serviço de sorteios está <span className="text-yellow-400 font-semibold">pendente de liberação</span> mediante pagamento da anuidade.
               </p>
 
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
-                <p className="text-yellow-200 text-sm leading-relaxed">
-                  Um administrador da Sortenaweb irá analisar e aprovar sua conta. Você receberá acesso ao painel assim que for liberado. Tente fazer login novamente mais tarde.
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4">
+                <p className="text-yellow-200 text-sm leading-relaxed mb-3">
+                  Para liberar o acesso à plataforma Sortenaweb, é necessário o pagamento da anuidade no valor de:
+                </p>
+                <p className="text-3xl font-black bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent mb-3">
+                  R$ 2.000,00
+                </p>
+                <p className="text-yellow-200/70 text-xs">
+                  Plano anual com acesso completo a todas as funcionalidades
+                </p>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  Após a confirmação do pagamento, a equipe da <span className="text-white font-semibold">Sortenaweb</span> irá liberar seu acesso ao painel. Entre em contato para realizar o pagamento e obter suas credenciais.
                 </p>
               </div>
 
