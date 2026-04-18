@@ -74,28 +74,16 @@ export default function SortearPage() {
         setParticipantes(participantesData)
         setRoletaEmails(participantesData.map(p => p.email))
 
-        // DEBUG: mostrar valores brutos de eligible
-        console.log('=== DEBUG ELIGIBLE ===')
-        participantesData.forEach((p, i) => {
-          console.log(`[${i}] ${p.email} → eligible=${JSON.stringify(p.eligible)} (type: ${typeof p.eligible})`)
-        })
-
         // Verificar se pelo menos um participante tem eligible === false
         // Isso indica que o usuário configurou elegibilidade manualmente
         const hasAnyIneligible = participantesData.some(p => p.eligible === false)
 
         let indices: number[] = []
         if (hasAnyIneligible) {
-          // Modo seleção: apenas os que têm eligible === true são elegíveis
           indices = participantesData
             .map((p, i) => (p.eligible === true) ? i : -1)
             .filter(i => i !== -1)
         }
-        // Se hasAnyIneligible é false, indices fica [] = modo aleatório puro
-
-        console.log('hasAnyIneligible:', hasAnyIneligible)
-        console.log('eligibleIndices:', indices)
-        console.log('=== FIM DEBUG ===')
 
         setEligibleIndices(indices)
       }
