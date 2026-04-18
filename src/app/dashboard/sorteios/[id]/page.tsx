@@ -40,6 +40,12 @@ export default function SorteioDetailPage() {
   const [activeTab, setActiveTab] = useState<'info' | 'premios' | 'participantes' | 'resultado'>('info')
   const [copied, setCopied] = useState(false)
 
+  // Edição inline
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [saving, setSaving] = useState(false)
+
   useEffect(() => {
     loadData()
   }, [id])
@@ -134,6 +140,46 @@ export default function SorteioDetailPage() {
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function startEditing() {
+    if (!sorteio) return
+    setEditTitle(sorteio.title)
+    setEditDescription(sorteio.description || '')
+    setIsEditing(true)
+  }
+
+  function cancelEditing() {
+    setIsEditing(false)
+  }
+
+  async function saveEditing() {
+    if (!sorteio) return
+    if (!editTitle.trim()) return
+
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('sorteios')
+        .update({
+          title: editTitle.trim(),
+          description: editDescription.trim() || null,
+        })
+        .eq('id', id)
+
+      if (error) throw error
+      setSorteio({
+        ...sorteio,
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+      })
+      setIsEditing(false)
+    } catch (error) {
+      console.error('Error updating sorteio:', error)
+      alert('Erro ao salvar alterações')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) {
@@ -310,16 +356,82 @@ export default function SorteioDetailPage() {
       {activeTab === 'info' && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <div className="space-y-4">
-            <div>
-              <label className="text-sm text-gray-400">Título</label>
-              <p className="text-lg font-medium mt-1">{sorteio.title}</p>
-            </div>
-            {sorteio.description && (
-              <div>
-                <label className="text-sm text-gray-400">Descrição</label>
-                <p className="text-gray-300 mt-1 whitespace-pre-wrap">{sorteio.description}</p>
-              </div>
+            {isEditing ? (
+              /* ===== MODO EDIÇÃO ===== */
+              <>
+                <div>
+                  <label htmlFor="edit-title" className="block text-sm text-gray-400 mb-1">Título</label>
+                  <input
+                    id="edit-title"
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-description" className="block text-sm text-gray-400 mb-1">Descrição</label>
+                  <textarea
+                    id="edit-description"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={4}
+                    placeholder="Descrição do sorteio (opcional)"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={saveEditing}
+                    disabled={saving || !editTitle.trim()}
+                    className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-medium text-sm hover:from-purple-500 hover:to-pink-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Check className="w-4 h-4" />
+                    {saving ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-5 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium text-sm transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* ===== MODO LEITURA ===== */
+              <>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <label className="text-sm text-gray-400">Título</label>
+                    <p className="text-lg font-medium mt-1">{sorteio.title}</p>
+                  </div>
+                  {isAtivo && (
+                    <button
+                      onClick={startEditing}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm text-gray-300 transition-colors flex-shrink-0"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      Editar
+                    </button>
+                  )}
+                </div>
+                {sorteio.description && (
+                  <div>
+                    <label className="text-sm text-gray-400">Descrição</label>
+                    <p className="text-gray-300 mt-1 whitespace-pre-wrap">{sorteio.description}</p>
+                  </div>
+                )}
+                {!sorteio.description && isAtivo && (
+                  <div>
+                    <label className="text-sm text-gray-400">Descrição</label>
+                    <p className="text-gray-500 mt-1 text-sm italic">Nenhuma descrição adicionada</p>
+                  </div>
+                )}
+              </>
             )}
+
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-800">
               <div>
                 <label className="text-sm text-gray-400">Slug</label>

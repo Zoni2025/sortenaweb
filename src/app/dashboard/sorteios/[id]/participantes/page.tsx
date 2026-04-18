@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Participante } from '@/lib/types'
-import { Plus, Trash2, ArrowLeft, AlertCircle, Upload } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, AlertCircle, Upload, Send } from 'lucide-react'
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const TELEGRAM_REGEX = /^@[a-zA-Z0-9_]{4,}$/
+
+function isValidContact(value: string): boolean {
+  return EMAIL_REGEX.test(value) || TELEGRAM_REGEX.test(value)
+}
 
 export default function ParticipantesPage() {
   const params = useParams()
@@ -50,25 +57,28 @@ export default function ParticipantesPage() {
     e.preventDefault()
     setError(null)
 
-    if (!formData.email.trim()) {
-      setError('Email é obrigatório')
+    const contact = formData.email.trim()
+
+    if (!contact) {
+      setError('Email ou Telegram é obrigatório')
       return
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) {
-      setError('Email inválido')
+    if (!isValidContact(contact)) {
+      setError('Informe um email válido ou um Telegram com @ (ex: @usuario)')
       return
     }
 
     setSubmitting(true)
 
     try {
+      const value = contact.startsWith('@') ? contact.toLowerCase() : contact.toLowerCase()
+
       const { data, error: insertError } = await supabase
         .from('participantes')
         .insert({
           sorteio_id: id,
-          email: formData.email.trim().toLowerCase(),
+          email: value,
           name: formData.name.trim() || null,
           phone: formData.phone.trim() || null,
           status: 'approved',
@@ -95,26 +105,26 @@ export default function ParticipantesPage() {
     setError(null)
 
     if (!bulkEmails.trim()) {
-      setError('Adicione pelo menos um email')
+      setError('Adicione pelo menos um email ou telegram')
       return
     }
 
-    const emails = bulkEmails
+    const contacts = bulkEmails
       .split('\n')
       .map(e => e.trim().toLowerCase())
-      .filter(e => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+      .filter(e => e && isValidContact(e))
 
-    if (emails.length === 0) {
-      setError('Nenhum email válido encontrado')
+    if (contacts.length === 0) {
+      setError('Nenhum email ou telegram válido encontrado')
       return
     }
 
     setSubmitting(true)
 
     try {
-      const participantesData = emails.map(email => ({
+      const participantesData = contacts.map(contact => ({
         sorteio_id: id,
-        email,
+        email: contact,
         name: null,
         phone: null,
         status: 'approved',
@@ -223,17 +233,21 @@ export default function ParticipantesPage() {
               <form onSubmit={handleSingleSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium mb-1">
-                    Email <span className="text-red-400">*</span>
+                    Email ou Telegram <span className="text-red-400">*</span>
                   </label>
                   <input
                     id="email"
-                    type="email"
+                    type="text"
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="email@example.com"
+                    placeholder="email@example.com ou @telegram"
                     className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                   />
+                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <Send className="w-3 h-3" />
+                    Telegram: use @ antes do nome (ex: @yagobgc)
+                  </p>
                 </div>
 
                 <div>
@@ -277,16 +291,17 @@ export default function ParticipantesPage() {
                 <div>
                   <label htmlFor="bulk_emails" className="block text-sm font-medium mb-1 flex items-center gap-2">
                     <Upload className="w-4 h-4" />
-                    Emails <span className="text-red-400">*</span>
+                    Emails / Telegram <span className="text-red-400">*</span>
                   </label>
                   <textarea
                     id="bulk_emails"
                     value={bulkEmails}
                     onChange={(e) => setBulkEmails(e.target.value)}
-                    placeholder="Um email por linha&#10;joao@email.com&#10;maria@email.com&#10;pedro@email.com"
+                    placeholder="Um por linha (email ou @telegram)&#10;joao@email.com&#10;@yagobgc&#10;maria@email.com&#10;@pedro_123"
                     rows={6}
                     className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors text-sm resize-none"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Aceita emails e Telegram (@usuario) misturados</p>
                 </div>
 
                 <button
@@ -318,12 +333,23 @@ export default function ParticipantesPage() {
               {participantes.map((p) => (
                 <div key={p.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors">
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{p.name || p.email}</p>
-                      {p.name && <p className="text-sm text-gray-400 truncate">{p.email}</p>}
-                      {p.phone && (
-                        <p className="text-sm text-gray-500">{p.phone}</p>
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                      {p.email.startsWith('@') ? (
+                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0" title="Telegram">
+                          <Send className="w-4 h-4 text-blue-400" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0" title="Email">
+                          <span className="text-purple-400 text-xs font-bold">@</span>
+                        </div>
                       )}
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{p.name || p.email}</p>
+                        {p.name && <p className="text-sm text-gray-400 truncate">{p.email}</p>}
+                        {p.phone && (
+                          <p className="text-sm text-gray-500">{p.phone}</p>
+                        )}
+                      </div>
                     </div>
                     <button
                       onClick={() => deleteParticipante(p.id)}
