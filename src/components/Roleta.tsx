@@ -164,19 +164,14 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       resultIndex = Math.floor(Math.random() * numItems)
     }
 
-    // Ângulo alvo: meio da fatia resultIndex no ponteiro (-π/2)
-    // R_final + resultIndex * sliceAngle + sliceAngle/2 ≡ -π/2 (mod 2π)
-    // R_final = -π/2 - resultIndex * sliceAngle - sliceAngle/2
-    const targetRot = -Math.PI / 2 - resultIndex * sliceAngle - sliceAngle / 2
+    // Ângulo alvo: centro da fatia resultIndex alinhado ao ponteiro (-π/2)
+    const exactTargetRot = -Math.PI / 2 - resultIndex * sliceAngle - sliceAngle / 2
 
     // Voltas extras (sempre girar bastante para frente)
     const fullSpins = (6 + Math.random() * 3) * 2 * Math.PI
 
     // Calcular rotação final absoluta
-    // Precisamos que finalRot ≡ targetRot (mod 2π)
-    // E que finalRot < currentRot (girar no sentido horário = diminuir ângulo)
-    let finalRot = targetRot
-    // Trazer finalRot para abaixo da posição atual menos as voltas extras
+    let finalRot = exactTargetRot
     while (finalRot > rotationRef.current) finalRot -= 2 * Math.PI
     finalRot -= fullSpins
 
@@ -190,7 +185,13 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       const progress = Math.min(elapsed / duration, 1)
       const eased = 1 - Math.pow(1 - progress, 4)
 
-      const current = startRot + totalDelta * eased
+      let current = startRot + totalDelta * eased
+
+      // No frame final, forçar rotação exata para eliminar erro de ponto flutuante
+      if (progress >= 1) {
+        current = exactTargetRot
+      }
+
       rotationRef.current = current
 
       // Desenhar
@@ -214,12 +215,8 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
 
         if (audioCtxRef.current) playWinSound(audioCtxRef.current)
 
-        // Se targetIndex foi definido, o resultado é ele (já decidido)
-        // Caso contrário, ler o ponteiro
-        const finalIndex = (targetIndex !== undefined && targetIndex >= 0 && targetIndex < numItems)
-          ? targetIndex
-          : getSliceAtPointer(current)
-        if (onResult) onResult(items[finalIndex], finalIndex)
+        // Resultado garantido: o resultIndex que foi calculado
+        if (onResult) onResult(items[resultIndex], resultIndex)
       }
     }
 
