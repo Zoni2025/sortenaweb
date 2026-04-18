@@ -74,15 +74,30 @@ export default function SortearPage() {
         setParticipantes(participantesData)
         setRoletaEmails(participantesData.map(p => p.email))
 
-        // Calcular índices dos elegíveis
-        // Se eligible é false → não elegível. Se true ou undefined/null → elegível
-        const indices = participantesData
-          .map((p, i) => (p.eligible !== false) ? i : -1)
-          .filter(i => i !== -1)
+        // DEBUG: mostrar valores brutos de eligible
+        console.log('=== DEBUG ELIGIBLE ===')
+        participantesData.forEach((p, i) => {
+          console.log(`[${i}] ${p.email} → eligible=${JSON.stringify(p.eligible)} (type: ${typeof p.eligible})`)
+        })
 
-        // Se todos são elegíveis (ou nenhum marcado), array vazio = modo aleatório puro
-        const allEligible = indices.length === participantesData.length
-        setEligibleIndices(allEligible ? [] : indices)
+        // Verificar se pelo menos um participante tem eligible === false
+        // Isso indica que o usuário configurou elegibilidade manualmente
+        const hasAnyIneligible = participantesData.some(p => p.eligible === false)
+
+        let indices: number[] = []
+        if (hasAnyIneligible) {
+          // Modo seleção: apenas os que têm eligible === true são elegíveis
+          indices = participantesData
+            .map((p, i) => (p.eligible === true) ? i : -1)
+            .filter(i => i !== -1)
+        }
+        // Se hasAnyIneligible é false, indices fica [] = modo aleatório puro
+
+        console.log('hasAnyIneligible:', hasAnyIneligible)
+        console.log('eligibleIndices:', indices)
+        console.log('=== FIM DEBUG ===')
+
+        setEligibleIndices(indices)
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -157,6 +172,14 @@ export default function SortearPage() {
           <Users className="w-4 h-4" />
           <span>{participantes.length} participante(s)</span>
         </div>
+        {eligibleIndices.length > 0 && (
+          <div className="mt-2 flex items-center justify-center gap-2 text-xs">
+            <Sparkles className="w-3 h-3 text-yellow-400" />
+            <span className="text-yellow-400">
+              Modo elegíveis: {eligibleIndices.length} de {participantes.length} podem ganhar
+            </span>
+          </div>
+        )}
       </div>
 
       {participantes.length === 0 ? (

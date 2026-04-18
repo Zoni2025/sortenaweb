@@ -50,7 +50,7 @@ function playWinSound(audioCtx: AudioContext) {
   } catch {}
 }
 
-export default function Roleta({ items, onResult, size = 400, disabled = false, targetIndex, eligibleIndices }: RoletaProps) {
+export default function Roleta({ items, onResult, size = 400, disabled = false, targetIndex, eligibleIndices = [] }: RoletaProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isSpinning, setIsSpinning] = useState(false)
   const animationRef = useRef<number | null>(null)
@@ -103,15 +103,31 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       ctx.lineWidth = 2
       ctx.stroke()
 
+      // Indicador de elegível (borda dourada)
+      if (eligibleIndices && eligibleIndices.length > 0 && eligibleIndices.includes(i)) {
+        ctx.beginPath()
+        ctx.moveTo(cx, cy)
+        ctx.arc(cx, cy, r, start, end)
+        ctx.closePath()
+        ctx.strokeStyle = '#facc15'
+        ctx.lineWidth = 4
+        ctx.stroke()
+      }
+
       // Texto
       ctx.save()
       ctx.translate(cx, cy)
       ctx.rotate(start + sliceAngle / 2)
       ctx.fillStyle = '#fff'
-      ctx.font = `bold ${Math.max(10, Math.min(14, 200 / numItems))}px sans-serif`
+      const fontSize = Math.max(10, Math.min(14, 200 / numItems))
+      ctx.font = `bold ${fontSize}px sans-serif`
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
       let text = item.length > 20 ? item.substring(0, 18) + '..' : item
+      // Adicionar ★ para elegíveis
+      if (eligibleIndices && eligibleIndices.length > 0 && eligibleIndices.includes(i)) {
+        text = '★ ' + text
+      }
       ctx.fillText(text, r - 20, 0)
       ctx.restore()
     })
@@ -136,7 +152,7 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
     ctx.strokeStyle = '#fff'
     ctx.lineWidth = 2
     ctx.stroke()
-  }, [items, size, numItems, sliceAngle])
+  }, [items, size, numItems, sliceAngle, eligibleIndices])
 
   // Desenhar sempre que items mudar (inicial)
   useEffect(() => {
@@ -159,14 +175,20 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
 
     // Decidir resultado
     let resultIndex: number
+    console.log('[Roleta] eligibleIndices recebido:', eligibleIndices)
+    console.log('[Roleta] numItems:', numItems)
+
     if (eligibleIndices && eligibleIndices.length > 0) {
       // Modo elegíveis: sortear aleatoriamente ENTRE os elegíveis
       resultIndex = eligibleIndices[Math.floor(Math.random() * eligibleIndices.length)]
+      console.log('[Roleta] MODO ELEGÍVEIS → resultIndex:', resultIndex, '→', items[resultIndex])
     } else if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < numItems) {
       resultIndex = targetIndex
+      console.log('[Roleta] MODO TARGET → resultIndex:', resultIndex)
     } else {
       // Modo aleatório: qualquer participante
       resultIndex = Math.floor(Math.random() * numItems)
+      console.log('[Roleta] MODO ALEATÓRIO → resultIndex:', resultIndex, '→', items[resultIndex])
     }
 
     // Ângulo alvo: centro da fatia resultIndex alinhado ao ponteiro (-π/2)
