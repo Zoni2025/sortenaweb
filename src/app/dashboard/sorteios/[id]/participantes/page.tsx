@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Participante } from '@/lib/types'
-import { Plus, Trash2, Check, X, ArrowLeft, AlertCircle, Upload } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, AlertCircle, Upload } from 'lucide-react'
 
 export default function ParticipantesPage() {
   const params = useParams()
@@ -71,7 +71,7 @@ export default function ParticipantesPage() {
           email: formData.email.trim().toLowerCase(),
           name: formData.name.trim() || null,
           phone: formData.phone.trim() || null,
-          status: 'pending',
+          status: 'approved',
         })
         .select()
 
@@ -117,7 +117,7 @@ export default function ParticipantesPage() {
         email,
         name: null,
         phone: null,
-        status: 'pending',
+        status: 'approved',
       }))
 
       const { data, error: insertError } = await supabase
@@ -141,46 +141,8 @@ export default function ParticipantesPage() {
     }
   }
 
-  async function updateParticipantStatus(participanteId: string, newStatus: 'pending' | 'approved' | 'rejected') {
-    try {
-      const { error: updateError } = await supabase
-        .from('participantes')
-        .update({ status: newStatus })
-        .eq('id', participanteId)
-
-      if (updateError) throw updateError
-      setParticipantes(participantes.map(p =>
-        p.id === participanteId ? { ...p, status: newStatus } : p
-      ))
-    } catch (err) {
-      console.error('Error updating participante:', err)
-      alert('Erro ao atualizar participante')
-    }
-  }
-
-  async function approveAll() {
-    if (!confirm(`Tem certeza que deseja aprovar ${participantes.filter(p => p.status === 'pending').length} participante(s)?`)) return
-
-    const pendingIds = participantes.filter(p => p.status === 'pending').map(p => p.id)
-
-    try {
-      const { error: updateError } = await supabase
-        .from('participantes')
-        .update({ status: 'approved' })
-        .in('id', pendingIds)
-
-      if (updateError) throw updateError
-      setParticipantes(participantes.map(p =>
-        pendingIds.includes(p.id) ? { ...p, status: 'approved' } : p
-      ))
-    } catch (err) {
-      console.error('Error approving all:', err)
-      alert('Erro ao aprovar participantes')
-    }
-  }
-
   async function deleteParticipante(participanteId: string) {
-    if (!confirm('Tem certeza que deseja deletar este participante?')) return
+    if (!confirm('Tem certeza que deseja remover este participante?')) return
 
     try {
       const { error: deleteError } = await supabase
@@ -192,13 +154,9 @@ export default function ParticipantesPage() {
       setParticipantes(participantes.filter(p => p.id !== participanteId))
     } catch (err) {
       console.error('Error deleting participante:', err)
-      alert('Erro ao deletar participante')
+      alert('Erro ao remover participante')
     }
   }
-
-  const pendingCount = participantes.filter(p => p.status === 'pending').length
-  const approvedCount = participantes.filter(p => p.status === 'approved').length
-  const rejectedCount = participantes.filter(p => p.status === 'rejected').length
 
   if (loading) {
     return (
@@ -219,7 +177,7 @@ export default function ParticipantesPage() {
       </button>
 
       <h1 className="text-3xl font-bold mb-1">Gerenciar Participantes</h1>
-      <p className="text-gray-400 mb-6">Adicione e aprove participantes para o sorteio</p>
+      <p className="text-gray-400 mb-6">Adicione participantes ao sorteio</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
@@ -346,30 +304,9 @@ export default function ParticipantesPage() {
         {/* Participantes List */}
         <div className="lg:col-span-2">
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-1">Total</p>
-              <p className="text-2xl font-bold">{participantes.length}</p>
-            </div>
-            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-              <p className="text-sm text-green-400 mb-1">Aprovados</p>
-              <p className="text-2xl font-bold text-green-400">{approvedCount}</p>
-            </div>
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-              <p className="text-sm text-yellow-400 mb-1">Pendentes</p>
-              <p className="text-2xl font-bold text-yellow-400">{pendingCount}</p>
-            </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+            <p className="text-sm text-gray-400">Total de participantes: <span className="text-white font-bold text-lg">{participantes.length}</span></p>
           </div>
-
-          {/* Approve All */}
-          {pendingCount > 0 && (
-            <button
-              onClick={approveAll}
-              className="mb-4 w-full px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg font-medium transition-colors"
-            >
-              Aprovar Todos ({pendingCount})
-            </button>
-          )}
 
           {/* Participantes */}
           {participantes.length === 0 ? (
@@ -383,48 +320,18 @@ export default function ParticipantesPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{p.name || p.email}</p>
-                      <p className="text-sm text-gray-400 truncate">{p.email}</p>
+                      {p.name && <p className="text-sm text-gray-400 truncate">{p.email}</p>}
                       {p.phone && (
                         <p className="text-sm text-gray-500">{p.phone}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {p.status === 'pending' ? (
-                        <>
-                          <button
-                            onClick={() => updateParticipantStatus(p.id, 'approved')}
-                            className="flex items-center justify-center w-9 h-9 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors"
-                            title="Aprovar"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => updateParticipantStatus(p.id, 'rejected')}
-                            className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
-                            title="Rejeitar"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </>
-                      ) : (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            p.status === 'approved'
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
-                          }`}
-                        >
-                          {p.status === 'approved' ? 'Aprovado' : 'Rejeitado'}
-                        </span>
-                      )}
-                      <button
-                        onClick={() => deleteParticipante(p.id)}
-                        className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-800 hover:bg-red-900/50 text-gray-400 hover:text-red-400 transition-colors"
-                        title="Deletar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => deleteParticipante(p.id)}
+                      className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-800 hover:bg-red-900/50 text-gray-400 hover:text-red-400 transition-colors flex-shrink-0"
+                      title="Remover"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}

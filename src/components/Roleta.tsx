@@ -6,23 +6,46 @@ interface RoletaProps {
   items: string[]
   onResult?: (item: string, index: number) => void
   size?: number
-  spinning?: boolean
   disabled?: boolean
-  targetIndex?: number // se definido, a roleta para neste index
+  targetIndex?: number
 }
 
 const COLORS = [
-  '#8B5CF6', // purple
-  '#EC4899', // pink
-  '#F97316', // orange
-  '#EAB308', // yellow
-  '#22C55E', // green
-  '#06B6D4', // cyan
-  '#3B82F6', // blue
-  '#A855F7', // violet
-  '#F43F5E', // rose
-  '#14B8A6', // teal
+  '#8B5CF6', '#EC4899', '#F97316', '#EAB308', '#22C55E',
+  '#06B6D4', '#3B82F6', '#A855F7', '#F43F5E', '#14B8A6',
 ]
+
+// Gera um som de tick usando Web Audio API
+function playTick(audioCtx: AudioContext, volume: number = 0.3) {
+  const osc = audioCtx.createOscillator()
+  const gain = audioCtx.createGain()
+  osc.connect(gain)
+  gain.connect(audioCtx.destination)
+  osc.frequency.value = 600 + Math.random() * 400
+  osc.type = 'sine'
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime)
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05)
+  osc.start(audioCtx.currentTime)
+  osc.stop(audioCtx.currentTime + 0.05)
+}
+
+// Som de vitória
+function playWinSound(audioCtx: AudioContext) {
+  const notes = [523, 659, 784, 1047] // C5, E5, G5, C6
+  notes.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator()
+    const gain = audioCtx.createGain()
+    osc.connect(gain)
+    gain.connect(audioCtx.destination)
+    osc.frequency.value = freq
+    osc.type = 'sine'
+    const startTime = audioCtx.currentTime + i * 0.15
+    gain.gain.setValueAtTime(0.3, startTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3)
+    osc.start(startTime)
+    osc.stop(startTime + 0.3)
+  })
+}
 
 export default function Roleta({ items, onResult, size = 400, disabled = false, targetIndex }: RoletaProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -30,6 +53,23 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
   const [rotation, setRotation] = useState(0)
   const animationRef = useRef<number | null>(null)
   const currentRotationRef = useRef(0)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const lastSliceRef = useRef(-1)
+
+  const sliceAngle = items.length > 0 ? (2 * Math.PI) / items.length : 0
+
+  // Determinar qual fatia está no ponteiro (topo = -π/2 = 270°)
+  // O ponteiro está no topo do canvas. Precisamos descobrir qual fatia está lá.
+  const getSliceAtPointer = useCallback((rot: number): number => {
+    if (items.length === 0) return -1
+    // O ponteiro está no ângulo -π/2 (topo).
+    // A fatia i começa em rot + i*sliceAngle.
+    // Queremos: qual i tal que rot + i*sliceAngle <= -π/2 < rot + (i+1)*sliceAngle
+    // Ou equivalente: normalizar (-π/2 - rot) para [0, 2π) e dividir por sliceAngle
+    let pointerAngle = (-Math.PI / 2 - rot) % (2 * Math.PI)
+    if (pointerAngle < 0) pointerAngle += 2 * Math.PI
+    return Math.floor(pointerAngle / sliceAngle) % items.length
+  }, [items.length, sliceAngle])
 
   const drawWheel = useCallback((ctx: CanvasRenderingContext2D, currentRotation: number) => {
     const centerX = size / 2
@@ -49,8 +89,6 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       ctx.fillText('Sem participantes', centerX, centerY)
       return
     }
-
-    const sliceAngle = (2 * Math.PI) / items.length
 
     items.forEach((item, i) => {
       const startAngle = currentRotation + i * sliceAngle
@@ -79,7 +117,6 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
 
-      // Truncar texto se necessário
       let text = item
       if (text.length > 20) {
         text = text.substring(0, 18) + '..'
@@ -98,7 +135,7 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
     ctx.lineWidth = 3
     ctx.stroke()
 
-    // Ponteiro (seta no topo)
+    // Ponteiro (seta no topo, apontando para baixo)
     ctx.beginPath()
     ctx.moveTo(centerX - 15, 5)
     ctx.lineTo(centerX + 15, 5)
@@ -109,7 +146,7 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
     ctx.strokeStyle = '#fff'
     ctx.lineWidth = 2
     ctx.stroke()
-  }, [items, size])
+  }, [items, size, sliceAngle])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -122,11 +159,15 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
   const spin = () => {
     if (isSpinning || disabled || items.length === 0) return
 
+    // Criar AudioContext no gesto do usuário (exigência do browser)
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+
     setIsSpinning(true)
+    lastSliceRef.current = -1
 
-    const sliceAngle = (2 * Math.PI) / items.length
-
-    // Calcular ângulo alvo
+    // Determinar resultado
     let resultIndex: number
     if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < items.length) {
       resultIndex = targetIndex
@@ -134,37 +175,64 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       resultIndex = Math.floor(Math.random() * items.length)
     }
 
-    // O ponteiro está no topo (270° ou -π/2). Precisamos que a fatia do resultado
-    // fique alinhada com o ponteiro. A fatia 'i' começa em i*sliceAngle.
-    // Para alinhar o meio da fatia com o topo:
-    const targetAngle = -(resultIndex * sliceAngle + sliceAngle / 2) - Math.PI / 2
+    // Calcular ângulo final:
+    // Queremos que a fatia resultIndex fique embaixo do ponteiro (topo = -π/2).
+    // A fatia i ocupa de i*sliceAngle até (i+1)*sliceAngle na roda (sem rotação).
+    // Com rotação R, a fatia i vai de R + i*sliceAngle até R + (i+1)*sliceAngle.
+    // Para o meio da fatia estar em -π/2:
+    // R + resultIndex*sliceAngle + sliceAngle/2 = -π/2 + 2πk
+    // R = -π/2 - resultIndex*sliceAngle - sliceAngle/2 + 2πk
+    const targetRotation = -Math.PI / 2 - resultIndex * sliceAngle - sliceAngle / 2
 
-    // Adicionar voltas extras (5-8 voltas)
-    const extraSpins = (5 + Math.random() * 3) * Math.PI * 2
-    const totalRotation = targetAngle + extraSpins - currentRotationRef.current
+    // Adicionar voltas extras (6-9 voltas completas)
+    const extraSpins = (6 + Math.random() * 3) * Math.PI * 2
+
+    // Calcular delta necessário a partir da posição atual
+    // Normalizar para que seja sempre positivo (girar para frente)
+    let delta = targetRotation - currentRotationRef.current - extraSpins
+    // Garantir que delta é negativo (rotação horária visualmente)
+    while (delta > 0) delta -= 2 * Math.PI
 
     const startRotation = currentRotationRef.current
-    const duration = 4000 + Math.random() * 1000
+    const totalDelta = delta
+    const duration = 5000 + Math.random() * 1000
     const startTime = Date.now()
 
     const animate = () => {
       const elapsed = Date.now() - startTime
       const progress = Math.min(elapsed / duration, 1)
 
-      // Easing: desacelera no final
+      // Easing: desacelera suavemente no final
       const eased = 1 - Math.pow(1 - progress, 4)
 
-      const current = startRotation + totalRotation * eased
+      const current = startRotation + totalDelta * eased
       currentRotationRef.current = current
       setRotation(current)
+
+      // Som de tick quando muda de fatia
+      const currentSlice = getSliceAtPointer(current)
+      if (currentSlice !== lastSliceRef.current && audioCtxRef.current) {
+        lastSliceRef.current = currentSlice
+        // Volume diminui conforme desacelera
+        const vol = 0.15 + 0.2 * (1 - progress)
+        playTick(audioCtxRef.current, vol)
+      }
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate)
       } else {
         setIsSpinning(false)
         currentRotationRef.current = current
+
+        // Som de vitória
+        if (audioCtxRef.current) {
+          playWinSound(audioCtxRef.current)
+        }
+
+        // Verificar qual fatia está realmente no ponteiro (resultado real)
+        const actualResult = getSliceAtPointer(current)
         if (onResult) {
-          onResult(items[resultIndex], resultIndex)
+          onResult(items[actualResult], actualResult)
         }
       }
     }
