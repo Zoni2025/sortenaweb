@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import type { Sorteio } from '@/lib/types'
-import { Plus, Search, ArrowRight, Trash2, Copy, CircleDot, Radar, User, Users } from 'lucide-react'
+import { Plus, Search, ArrowRight, Trash2, Copy, CircleDot, User, Users } from 'lucide-react'
 
 export default function SorteiosPage() {
   const [sorteios, setSorteios] = useState<Sorteio[]>([])
@@ -222,13 +222,9 @@ export default function SorteiosPage() {
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusLabels[sorteio.status]?.color}`}>
                       {statusLabels[sorteio.status]?.label}
                     </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
-                      sorteio.draw_type === 'radar'
-                        ? 'bg-cyan-500/20 text-cyan-400'
-                        : 'bg-cyan-500/20 text-cyan-400'
-                    }`}>
-                      {sorteio.draw_type === 'radar' ? <Radar className="w-3 h-3" /> : <CircleDot className="w-3 h-3" />}
-                      {sorteio.draw_type === 'radar' ? 'Radar' : 'Roleta'}
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400 flex items-center gap-1">
+                      <CircleDot className="w-3 h-3" />
+                      Roleta
                     </span>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
                       sorteio.view_type === 'coletivo'

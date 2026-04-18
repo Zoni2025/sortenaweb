@@ -17,7 +17,7 @@ export interface Sorteio {
   description: string | null
   slug: string
   status: 'active' | 'finished' | 'draft' | 'cancelled'
-  draw_type: 'roleta' | 'radar'
+  draw_type: 'roleta'
   view_type: 'individual' | 'coletivo'
   draw_date: string | null
   max_participants: number | null
