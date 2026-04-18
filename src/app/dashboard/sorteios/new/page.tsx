@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { AlertCircle, CircleDot, User, Users, Calendar } from 'lucide-react'
+import { AlertCircle, CircleDot, Radar, User, Users, Calendar } from 'lucide-react'
 
 function slugify(text: string): string {
   return text
@@ -26,7 +26,7 @@ export default function NewSorteioPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    draw_type: 'roleta' as 'roleta',
+    draw_type: 'roleta' as 'roleta' | 'radar',
     view_type: 'individual' as 'individual' | 'coletivo',
     max_participants: '',
   })
@@ -183,6 +183,28 @@ export default function NewSorteioPage() {
                   <div>
                     <h4 className="font-semibold text-white">Roleta</h4>
                     <p className="text-xs text-gray-400 mt-0.5">Animação de roleta girando para revelar o resultado</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, draw_type: 'radar' })}
+                  className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
+                    formData.draw_type === 'radar'
+                      ? 'border-cyan-500 bg-cyan-500/10'
+                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    formData.draw_type === 'radar'
+                      ? 'bg-cyan-500/20 text-cyan-400'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    <Radar className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white">Radar</h4>
+                    <p className="text-xs text-gray-400 mt-0.5">Scanner rastreando e revelando o ganhador com visual futurista</p>
                   </div>
                 </button>
               </div>

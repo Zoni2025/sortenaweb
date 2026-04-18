@@ -18,6 +18,7 @@ import {
   X,
   AlertCircle,
   CircleDot,
+  Radar,
   User,
   XCircle,
   Link as LinkIcon,
@@ -297,8 +298,8 @@ export default function SorteioDetailPage() {
               </span>
               {/* Tipo de sorteio */}
               <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400">
-                <CircleDot className="w-3 h-3" />
-                Roleta
+                {sorteio.draw_type === 'radar' ? <Radar className="w-3 h-3" /> : <CircleDot className="w-3 h-3" />}
+                {sorteio.draw_type === 'radar' ? 'Radar' : 'Roleta'}
               </span>
               {/* Tipo de visualização */}
               <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
@@ -526,7 +527,7 @@ export default function SorteioDetailPage() {
               </div>
               <div>
                 <label className="text-sm text-gray-400">Tipo de Sorteio</label>
-                <p className="text-gray-300 mt-1">Roleta</p>
+                <p className="text-gray-300 mt-1">{sorteio.draw_type === 'radar' ? 'Radar' : 'Roleta'}</p>
               </div>
             </div>
           </div>

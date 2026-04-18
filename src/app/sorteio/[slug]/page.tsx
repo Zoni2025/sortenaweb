@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Roleta from '@/components/Roleta'
+import Radar from '@/components/Radar'
 import { Sparkles, Mail, Trophy, Clock } from 'lucide-react'
 
 interface SorteioPublic {
@@ -331,17 +332,28 @@ export default function SorteioPublicPage() {
           </div>
         )}
 
-        {/* STEP: Roleta (primeira revelação) */}
+        {/* STEP: Roleta/Radar (primeira revelação) */}
         {step === 'roleta' && !showResult && (
           <div className="text-center">
-            <h2 className="text-2xl font-bold mb-8 text-white">Gire a roleta para descobrir seu prêmio!</h2>
+            <h2 className="text-2xl font-bold mb-8 text-white">
+              {sorteio?.draw_type === 'radar' ? 'Inicie o radar para descobrir seu prêmio!' : 'Gire a roleta para descobrir seu prêmio!'}
+            </h2>
             <div className="flex justify-center">
-              <Roleta
-                items={roletaItems}
-                targetIndex={targetIndex}
-                onResult={handleRoletaResult}
-                size={380}
-              />
+              {sorteio?.draw_type === 'radar' ? (
+                <Radar
+                  items={roletaItems}
+                  targetIndex={targetIndex}
+                  onResult={handleRoletaResult}
+                  size={380}
+                />
+              ) : (
+                <Roleta
+                  items={roletaItems}
+                  targetIndex={targetIndex}
+                  onResult={handleRoletaResult}
+                  size={380}
+                />
+              )}
             </div>
           </div>
         )}

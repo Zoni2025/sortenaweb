@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import type { Sorteio, Participante } from '@/lib/types'
 import { AlertCircle, Trophy, RotateCcw, Users, X, Sparkles } from 'lucide-react'
 import Roleta from '@/components/Roleta'
+import Radar from '@/components/Radar'
 
 interface SorteadoHistorico {
   email: string
@@ -172,13 +173,23 @@ export default function SortearPage() {
         </div>
       ) : (
         <>
-          <Roleta
-            key={sorteioKey}
-            items={roletaEmails}
-            onResult={handleRoletaResult}
-            size={420}
-            eligibleIndices={eligibleIndices}
-          />
+          {sorteio.draw_type === 'radar' ? (
+            <Radar
+              key={sorteioKey}
+              items={roletaEmails}
+              onResult={handleRoletaResult}
+              size={420}
+              eligibleIndices={eligibleIndices}
+            />
+          ) : (
+            <Roleta
+              key={sorteioKey}
+              items={roletaEmails}
+              onResult={handleRoletaResult}
+              size={420}
+              eligibleIndices={eligibleIndices}
+            />
+          )}
 
           {/* Histórico de Ganhadores */}
           {historico.length > 0 && (
