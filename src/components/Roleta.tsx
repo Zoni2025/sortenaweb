@@ -214,9 +214,12 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
 
         if (audioCtxRef.current) playWinSound(audioCtxRef.current)
 
-        // Resultado = o que está de fato no ponteiro
-        const actual = getSliceAtPointer(current)
-        if (onResult) onResult(items[actual], actual)
+        // Se targetIndex foi definido, o resultado é ele (já decidido)
+        // Caso contrário, ler o ponteiro
+        const finalIndex = (targetIndex !== undefined && targetIndex >= 0 && targetIndex < numItems)
+          ? targetIndex
+          : getSliceAtPointer(current)
+        if (onResult) onResult(items[finalIndex], finalIndex)
       }
     }
 
