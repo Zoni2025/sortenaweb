@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import type { Sorteio } from '@/lib/types'
-import { Plus, Search, ArrowRight, Trash2 } from 'lucide-react'
+import { Plus, Search, ArrowRight, Trash2, Copy } from 'lucide-react'
 
 export default function SorteiosPage() {
   const [sorteios, setSorteios] = useState<Sorteio[]>([])
@@ -52,6 +52,62 @@ export default function SorteiosPage() {
       console.error('Error loading sorteios:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function duplicarSorteio(sorteio: Sorteio) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Gerar slug único
+      const baseSlug = sorteio.slug.replace(/-[a-z0-9]+$/, '')
+      const uniqueSlug = baseSlug + '-copia-' + Date.now().toString(36)
+
+      // Criar cópia do sorteio
+      const { data: newSorteio, error: insertError } = await supabase
+        .from('sorteios')
+        .insert({
+          user_id: user.id,
+          title: sorteio.title + ' (Cópia)',
+          description: sorteio.description,
+          slug: uniqueSlug,
+          status: 'draft',
+          draw_date: sorteio.draw_date,
+          max_participants: sorteio.max_participants,
+          is_public: sorteio.is_public,
+        })
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      // Duplicar prêmios do sorteio original
+      if (newSorteio) {
+        const { data: premios } = await supabase
+          .from('premios')
+          .select('*')
+          .eq('sorteio_id', sorteio.id)
+
+        if (premios && premios.length > 0) {
+          const newPremios = premios.map(p => ({
+            sorteio_id: newSorteio.id,
+            name: p.name,
+            description: p.description,
+            image_url: p.image_url,
+            quantity: p.quantity,
+            win_percentage: p.win_percentage,
+          }))
+
+          await supabase.from('premios').insert(newPremios)
+        }
+
+        // Recarregar lista
+        await loadSorteios()
+      }
+    } catch (error) {
+      console.error('Error duplicating sorteio:', error)
+      alert('Erro ao duplicar sorteio')
     }
   }
 
@@ -188,6 +244,13 @@ export default function SorteiosPage() {
                   >
                     <ArrowRight className="w-4 h-4" />
                   </Link>
+                  <button
+                    onClick={() => duplicarSorteio(sorteio)}
+                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-800 hover:bg-purple-900/50 text-gray-400 hover:text-purple-400 transition-colors"
+                    title="Duplicar"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => deleteSorteio(sorteio.id)}
                     className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-800 hover:bg-red-900/50 text-gray-400 hover:text-red-400 transition-colors"
