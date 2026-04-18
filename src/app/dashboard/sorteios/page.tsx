@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import type { Sorteio } from '@/lib/types'
-import { Plus, Search, ArrowRight, Trash2, Copy } from 'lucide-react'
+import { Plus, Search, ArrowRight, Trash2, Copy, CircleDot, User, Users } from 'lucide-react'
 
 export default function SorteiosPage() {
   const [sorteios, setSorteios] = useState<Sorteio[]>([])
@@ -73,6 +73,8 @@ export default function SorteiosPage() {
           description: sorteio.description,
           slug: uniqueSlug,
           status: 'draft',
+          draw_type: sorteio.draw_type || 'roleta',
+          view_type: sorteio.view_type || 'individual',
           draw_date: sorteio.draw_date,
           max_participants: sorteio.max_participants,
           is_public: sorteio.is_public,
@@ -224,8 +226,20 @@ export default function SorteiosPage() {
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusLabels[sorteio.status]?.color}`}>
                       {statusLabels[sorteio.status]?.label}
                     </span>
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400 flex items-center gap-1">
+                      <CircleDot className="w-3 h-3" />
+                      Roleta
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+                      sorteio.view_type === 'coletivo'
+                        ? 'bg-pink-500/20 text-pink-400'
+                        : 'bg-purple-500/20 text-purple-400'
+                    }`}>
+                      {sorteio.view_type === 'coletivo' ? <Users className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                      {sorteio.view_type === 'coletivo' ? 'Coletivo' : 'Individual'}
+                    </span>
                     {sorteio.is_public && (
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
                         Público
                       </span>
                     )}

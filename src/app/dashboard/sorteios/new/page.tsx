@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, CircleDot, User, Users } from 'lucide-react'
 
 function slugify(text: string): string {
   return text
@@ -22,6 +22,8 @@ export default function NewSorteioPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    draw_type: 'roleta' as 'roleta',
+    view_type: 'individual' as 'individual' | 'coletivo',
     draw_date: '',
     max_participants: '',
     is_public: false,
@@ -69,6 +71,8 @@ export default function NewSorteioPage() {
           description: formData.description.trim() || null,
           slug: uniqueSlug,
           status: 'draft',
+          draw_type: formData.draw_type,
+          view_type: formData.view_type,
           draw_date: formData.draw_date || null,
           max_participants: formData.max_participants ? parseInt(formData.max_participants) : null,
           is_public: formData.is_public,
@@ -133,6 +137,92 @@ export default function NewSorteioPage() {
                 </div>
               </div>
             )}
+
+            {/* Tipo de Sorteio (Animação) */}
+            <div>
+              <label className="block text-sm font-medium mb-3">
+                Tipo de Sorteio <span className="text-red-400">*</span>
+              </label>
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, draw_type: 'roleta' })}
+                  className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
+                    formData.draw_type === 'roleta'
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    formData.draw_type === 'roleta'
+                      ? 'bg-purple-500/20 text-purple-400'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    <CircleDot className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white">Roleta</h4>
+                    <p className="text-xs text-gray-400 mt-0.5">Animação de roleta girando para revelar o resultado</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Tipo de Visualização */}
+            <div>
+              <label className="block text-sm font-medium mb-3">
+                Tipo de Visualização <span className="text-red-400">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, view_type: 'individual' })}
+                  className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all text-center ${
+                    formData.view_type === 'individual'
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                  }`}
+                >
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                    formData.view_type === 'individual'
+                      ? 'bg-purple-500/20 text-purple-400'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    <User className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white">Individual</h4>
+                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                      Cada participante acessa o link, insere seu e-mail e descobre seu resultado com a animação. Visualização única.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, view_type: 'coletivo' })}
+                  className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all text-center ${
+                    formData.view_type === 'coletivo'
+                      ? 'border-pink-500 bg-pink-500/10'
+                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                  }`}
+                >
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                    formData.view_type === 'coletivo'
+                      ? 'bg-pink-500/20 text-pink-400'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    <Users className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white">Coletivo</h4>
+                    <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                      O administrador controla a roleta e sorteia e-mails dos participantes. Pode girar quantas vezes quiser.
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
 
             {/* Description */}
             <div>
