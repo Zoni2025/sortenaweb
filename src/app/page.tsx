@@ -7,7 +7,7 @@ import {
   Users,
   Trophy,
   Share2,
-  BarChart3,
+  Shield,
   ArrowRight,
   Check,
 } from 'lucide-react'
@@ -132,9 +132,9 @@ export default function Home() {
             {[
               { icon: Gift, title: 'Criar Sorteios', description: 'Monte sorteios personalizados em segundos. Configure prêmios, regras e datas.', color: 'from-purple-500/20 to-purple-600/20', border: 'border-purple-500/50' },
               { icon: Users, title: 'Gerenciar Participantes', description: 'Adicione e gerencie participantes por email. Aprovação individual ou em massa.', color: 'from-pink-500/20 to-pink-600/20', border: 'border-pink-500/50' },
-              { icon: Trophy, title: 'Definir Prêmios', description: 'Configure múltiplos prêmios com descrições e probabilidades personalizadas.', color: 'from-orange-500/20 to-orange-600/20', border: 'border-orange-500/50' },
+              { icon: Trophy, title: 'Definir Prêmios', description: 'Configure múltiplos prêmios com descrições detalhadas para cada sorteio.', color: 'from-orange-500/20 to-orange-600/20', border: 'border-orange-500/50' },
               { icon: Share2, title: 'Links Compartilháveis', description: 'Gere links únicos para cada sorteio. Participantes acessam resultados online.', color: 'from-yellow-500/20 to-yellow-600/20', border: 'border-yellow-500/50' },
-              { icon: BarChart3, title: '% de Chance', description: 'Controle as probabilidades de cada prêmio. Crie sorteios justos e equilibrados.', color: 'from-cyan-500/20 to-cyan-600/20', border: 'border-cyan-500/50' },
+              { icon: Shield, title: 'Segurança e Transparência', description: 'Resultados registrados com data e hora. Histórico completo de cada sorteio.', color: 'from-cyan-500/20 to-cyan-600/20', border: 'border-cyan-500/50' },
               { icon: Sparkles, title: 'Revelação de Prêmios', description: 'Cada ganhador recebe um link exclusivo para descobrir seu prêmio com animação.', color: 'from-violet-500/20 to-violet-600/20', border: 'border-violet-500/50' },
             ].map((feature, idx) => (
               <div
@@ -193,7 +193,7 @@ export default function Home() {
                   'Até 10.000 participantes por sorteio',
                   'Gestão de prêmios personalizada',
                   'Links compartilháveis',
-                  'Controle de probabilidades',
+                  'Histórico completo de resultados',
                   'Página de revelação de prêmios',
                   'Suporte por email',
                   'Exportação de resultados',
