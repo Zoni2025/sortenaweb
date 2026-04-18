@@ -2,11 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import type { Sorteio, Participante } from '@/lib/types'
-import { ArrowLeft, AlertCircle, Trophy, RotateCcw, Users, X, Sparkles } from 'lucide-react'
+import { AlertCircle, Trophy, RotateCcw, Users, X, Sparkles } from 'lucide-react'
 import Roleta from '@/components/Roleta'
+
+interface SorteadoHistorico {
+  email: string
+  name: string | null
+  timestamp: string
+}
 
 export default function SortearPage() {
   const params = useParams()
@@ -22,6 +27,7 @@ export default function SortearPage() {
   const [roletaEmails, setRoletaEmails] = useState<string[]>([])
   const [ultimoSorteado, setUltimoSorteado] = useState<string | null>(null)
   const [showPopup, setShowPopup] = useState(false)
+  const [historico, setHistorico] = useState<SorteadoHistorico[]>([])
   const [sorteioKey, setSorteioKey] = useState(0)
 
   useEffect(() => {
@@ -74,8 +80,28 @@ export default function SortearPage() {
     }
   }
 
-  function handleRoletaResult(email: string) {
+  async function handleRoletaResult(email: string) {
     setUltimoSorteado(email)
+    const participante = participantes.find(p => p.email === email)
+    const name = participante?.name || null
+    const timestamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+
+    setHistorico(prev => [
+      { email, name, timestamp },
+      ...prev,
+    ])
+
+    // Salvar resultado no banco
+    try {
+      await supabase.from('sorteio_resultados').insert({
+        sorteio_id: id,
+        email,
+        name,
+      })
+    } catch (err) {
+      console.error('Erro ao salvar resultado:', err)
+    }
+
     setTimeout(() => setShowPopup(true), 600)
   }
 
@@ -101,9 +127,8 @@ export default function SortearPage() {
           <p className="text-gray-400 mb-4">{error || 'Sorteio não encontrado'}</p>
           <button
             onClick={() => window.close()}
-            className="text-purple-400 hover:text-purple-300 inline-flex items-center gap-1"
+            className="text-purple-400 hover:text-purple-300 text-sm"
           >
-            <ArrowLeft className="w-4 h-4" />
             Fechar
           </button>
         </div>
@@ -131,12 +156,45 @@ export default function SortearPage() {
           </div>
         </div>
       ) : (
-        <Roleta
-          key={sorteioKey}
-          items={roletaEmails}
-          onResult={handleRoletaResult}
-          size={420}
-        />
+        <>
+          <Roleta
+            key={sorteioKey}
+            items={roletaEmails}
+            onResult={handleRoletaResult}
+            size={420}
+          />
+
+          {/* Histórico de Ganhadores */}
+          {historico.length > 0 && (
+            <div className="w-full max-w-md mt-10">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-400" />
+                Últimos Ganhadores
+              </h3>
+              <div className="space-y-2">
+                {historico.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 px-4 py-3 bg-gray-900/60 border border-gray-800/50 rounded-lg"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {historico.length - idx}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {item.name || item.email}
+                      </p>
+                      {item.name && (
+                        <p className="text-xs text-gray-500 truncate">{item.email}</p>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600 flex-shrink-0">{item.timestamp}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* ========== POPUP FULLSCREEN DE RESULTADO ========== */}

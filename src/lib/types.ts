@@ -58,3 +58,11 @@ export interface Ganhador {
   participante?: Participante
   premio?: Premio
 }
+
+export interface SorteioResultado {
+  id: string
+  sorteio_id: string
+  email: string
+  name: string | null
+  drawn_at: string
+}

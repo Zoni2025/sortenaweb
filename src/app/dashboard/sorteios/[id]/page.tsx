@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import type { Sorteio, Premio, Participante, Ganhador } from '@/lib/types'
+import type { Sorteio, Premio, Participante, Ganhador, SorteioResultado } from '@/lib/types'
 import {
   Copy,
   Edit,
@@ -21,6 +21,8 @@ import {
   User,
   XCircle,
   Link as LinkIcon,
+  Trophy,
+  Clock,
 } from 'lucide-react'
 
 export default function SorteioDetailPage() {
@@ -33,6 +35,7 @@ export default function SorteioDetailPage() {
   const [premios, setPremios] = useState<Premio[]>([])
   const [participantes, setParticipantes] = useState<Participante[]>([])
   const [ganhadores, setGanhadores] = useState<Ganhador[]>([])
+  const [sorteioResultados, setSorteioResultados] = useState<SorteioResultado[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'info' | 'premios' | 'participantes' | 'resultado'>('info')
   const [copied, setCopied] = useState(false)
@@ -74,6 +77,15 @@ export default function SorteioDetailPage() {
         .order('created_at', { ascending: false })
 
       if (ganhadoresData) setGanhadores(ganhadoresData as Ganhador[])
+
+      // Carregar resultados do sorteio coletivo
+      const { data: resultadosData } = await supabase
+        .from('sorteio_resultados')
+        .select('*')
+        .eq('sorteio_id', id)
+        .order('drawn_at', { ascending: false })
+
+      if (resultadosData) setSorteioResultados(resultadosData as SorteioResultado[])
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -242,9 +254,9 @@ export default function SorteioDetailPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-400">Ganhadores</span>
-            <Check className="w-5 h-5 text-blue-400" />
+            <Trophy className="w-5 h-5 text-yellow-400" />
           </div>
-          <p className="text-2xl font-bold mt-1">{ganhadores.length}</p>
+          <p className="text-2xl font-bold mt-1">{isColetivo ? sorteioResultados.length : ganhadores.length}</p>
         </div>
       </div>
 
@@ -429,46 +441,122 @@ export default function SorteioDetailPage() {
 
       {activeTab === 'resultado' && (
         <div>
-          {ganhadores.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-              <Check className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">Nenhum ganhador registrado ainda</p>
-              {isColetivo && isAtivo && (
-                <button
-                  onClick={() => window.open(`/dashboard/sorteios/${id}/sortear`, '_blank')}
-                  className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-medium hover:from-purple-500 hover:to-pink-500 transition-all"
-                >
-                  <Play className="w-4 h-4" />
-                  Realizar Sorteio
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {ganhadores.map((ganhador) => (
-                <div key={ganhador.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-medium">{ganhador.participante?.name || ganhador.participante?.email}</h3>
-                        {ganhador.revealed ? (
-                          <Check className="w-4 h-4 text-green-400" />
-                        ) : (
-                          <X className="w-4 h-4 text-gray-500" />
+          {isColetivo ? (
+            /* ===== RESULTADO COLETIVO ===== */
+            sorteioResultados.length === 0 ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                <Trophy className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400">Nenhum sorteio realizado ainda</p>
+                {isAtivo && (
+                  <button
+                    onClick={() => window.open(`/dashboard/sorteios/${id}/sortear`, '_blank')}
+                    className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-medium hover:from-purple-500 hover:to-pink-500 transition-all"
+                  >
+                    <Play className="w-4 h-4" />
+                    Realizar Sorteio
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {isAtivo && (
+                  <button
+                    onClick={() => window.open(`/dashboard/sorteios/${id}/sortear`, '_blank')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-medium hover:from-purple-500 hover:to-pink-500 transition-all"
+                  >
+                    <Play className="w-4 h-4" />
+                    Sortear Novamente
+                  </button>
+                )}
+
+                <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                  {/* Cabeçalho da tabela */}
+                  <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-gray-800/50 border-b border-gray-800 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <div className="col-span-1">#</div>
+                    <div className="col-span-5">Ganhador</div>
+                    <div className="col-span-3">Email</div>
+                    <div className="col-span-3">Data / Hora</div>
+                  </div>
+
+                  {/* Linhas */}
+                  {sorteioResultados.map((resultado, idx) => (
+                    <div
+                      key={resultado.id}
+                      className={`grid grid-cols-12 gap-4 px-5 py-4 items-center ${
+                        idx !== sorteioResultados.length - 1 ? 'border-b border-gray-800/50' : ''
+                      } hover:bg-gray-800/30 transition-colors`}
+                    >
+                      <div className="col-span-1">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold">
+                          {sorteioResultados.length - idx}
+                        </div>
+                      </div>
+                      <div className="col-span-5 min-w-0">
+                        <p className="font-medium text-white truncate">
+                          {resultado.name || resultado.email}
+                        </p>
+                        {resultado.name && (
+                          <p className="text-xs text-gray-500 truncate">{resultado.email}</p>
                         )}
                       </div>
-                      <p className="text-sm text-gray-400 mb-2">Prêmio: {ganhador.premio?.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(ganhador.created_at).toLocaleString('pt-BR', {
-                          dateStyle: 'long',
-                          timeStyle: 'short',
-                        })}
-                      </p>
+                      <div className="col-span-3 min-w-0">
+                        <p className="text-sm text-gray-400 truncate">{resultado.email}</p>
+                      </div>
+                      <div className="col-span-3">
+                        <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                          <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>
+                            {new Date(resultado.drawn_at).toLocaleString('pt-BR', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                              timeZone: 'America/Sao_Paulo',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs text-gray-600 text-center mt-2">
+                  Total: {sorteioResultados.length} sorteio(s) realizado(s)
+                </p>
+              </div>
+            )
+          ) : (
+            /* ===== RESULTADO INDIVIDUAL ===== */
+            ganhadores.length === 0 ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                <Check className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400">Nenhum ganhador registrado ainda</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {ganhadores.map((ganhador) => (
+                  <div key={ganhador.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-medium">{ganhador.participante?.name || ganhador.participante?.email}</h3>
+                          {ganhador.revealed ? (
+                            <Check className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <X className="w-4 h-4 text-gray-500" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-400 mb-2">Prêmio: {ganhador.premio?.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(ganhador.created_at).toLocaleString('pt-BR', {
+                            dateStyle: 'long',
+                            timeStyle: 'short',
+                          })}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       )}

@@ -107,6 +107,17 @@ export default function DashboardLayout({
     )
   }
 
+  // Modo fullscreen para página de sortear (sem sidebar)
+  const isFullscreen = pathname?.includes('/sortear')
+
+  if (isFullscreen) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white">
+        {children}
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       {/* Mobile header */}
