@@ -4,13 +4,20 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Participante } from '@/lib/types'
-import { Plus, Trash2, ArrowLeft, AlertCircle, Upload, Send } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, AlertCircle, Upload, Send, User } from 'lucide-react'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const TELEGRAM_REGEX = /^@[a-zA-Z0-9_]{4,}$/
+const NAME_REGEX = /^[^\s].{1,}$/ // pelo menos 2 caracteres, não começa com espaço
 
 function isValidContact(value: string): boolean {
-  return EMAIL_REGEX.test(value) || TELEGRAM_REGEX.test(value)
+  return EMAIL_REGEX.test(value) || TELEGRAM_REGEX.test(value) || NAME_REGEX.test(value)
+}
+
+function getContactType(value: string): 'email' | 'telegram' | 'name' {
+  if (EMAIL_REGEX.test(value)) return 'email'
+  if (TELEGRAM_REGEX.test(value)) return 'telegram'
+  return 'name'
 }
 
 export default function ParticipantesPage() {
@@ -60,26 +67,31 @@ export default function ParticipantesPage() {
     const contact = formData.email.trim()
 
     if (!contact) {
-      setError('Email ou Telegram é obrigatório')
+      setError('Informe um nome, email ou Telegram')
       return
     }
 
     if (!isValidContact(contact)) {
-      setError('Informe um email válido ou um Telegram com @ (ex: @usuario)')
+      setError('Informe um nome (mín. 2 caracteres), email válido ou Telegram com @ (ex: @usuario)')
       return
     }
 
     setSubmitting(true)
 
     try {
-      const value = contact.startsWith('@') ? contact.toLowerCase() : contact.toLowerCase()
+      const type = getContactType(contact)
+      // Se for nome, salvar no campo name e email. Se for email/telegram, salvar normalmente.
+      const emailValue = type === 'name' ? contact.trim() : contact.toLowerCase()
+      const nameValue = type === 'name'
+        ? contact.trim()
+        : (formData.name.trim() || null)
 
       const { data, error: insertError } = await supabase
         .from('participantes')
         .insert({
           sorteio_id: id,
-          email: value,
-          name: formData.name.trim() || null,
+          email: emailValue,
+          name: nameValue,
           phone: formData.phone.trim() || null,
           status: 'approved',
         })
@@ -111,24 +123,29 @@ export default function ParticipantesPage() {
 
     const contacts = bulkEmails
       .split('\n')
-      .map(e => e.trim().toLowerCase())
+      .map(e => e.trim())
       .filter(e => e && isValidContact(e))
 
     if (contacts.length === 0) {
-      setError('Nenhum email ou telegram válido encontrado')
+      setError('Nenhum nome, email ou telegram válido encontrado')
       return
     }
 
     setSubmitting(true)
 
     try {
-      const participantesData = contacts.map(contact => ({
-        sorteio_id: id,
-        email: contact,
-        name: null,
-        phone: null,
-        status: 'approved',
-      }))
+      const participantesData = contacts.map(contact => {
+        const type = getContactType(contact)
+        const emailValue = type === 'name' ? contact.trim() : contact.toLowerCase()
+        const nameValue = type === 'name' ? contact.trim() : null
+        return {
+          sorteio_id: id,
+          email: emailValue,
+          name: nameValue,
+          phone: null,
+          status: 'approved',
+        }
+      })
 
       const { data, error: insertError } = await supabase
         .from('participantes')
@@ -233,7 +250,7 @@ export default function ParticipantesPage() {
               <form onSubmit={handleSingleSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium mb-1">
-                    Email ou Telegram <span className="text-red-400">*</span>
+                    Nome, Email ou Telegram <span className="text-red-400">*</span>
                   </label>
                   <input
                     id="email"
@@ -241,12 +258,12 @@ export default function ParticipantesPage() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="email@example.com ou @telegram"
+                    placeholder="João Silva, email@example.com ou @telegram"
                     className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors text-sm"
                   />
                   <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                     <Send className="w-3 h-3" />
-                    Telegram: use @ antes do nome (ex: @yagobgc)
+                    Nome (mín. 2 caracteres), email ou Telegram com @ (ex: @yagobgc)
                   </p>
                 </div>
 
@@ -291,17 +308,17 @@ export default function ParticipantesPage() {
                 <div>
                   <label htmlFor="bulk_emails" className="block text-sm font-medium mb-1 flex items-center gap-2">
                     <Upload className="w-4 h-4" />
-                    Emails / Telegram <span className="text-red-400">*</span>
+                    Participantes <span className="text-red-400">*</span>
                   </label>
                   <textarea
                     id="bulk_emails"
                     value={bulkEmails}
                     onChange={(e) => setBulkEmails(e.target.value)}
-                    placeholder="Um por linha (email ou @telegram)&#10;joao@email.com&#10;@yagobgc&#10;maria@email.com&#10;@pedro_123"
+                    placeholder="Um por linha&#10;João Silva&#10;joao@email.com&#10;@yagobgc&#10;Maria Santos&#10;@pedro_123"
                     rows={6}
                     className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors text-sm resize-none"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Aceita emails e Telegram (@usuario) misturados</p>
+                  <p className="text-xs text-gray-500 mt-1">Aceita nomes, emails e Telegram (@usuario) misturados</p>
                 </div>
 
                 <button
@@ -338,9 +355,13 @@ export default function ParticipantesPage() {
                         <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0" title="Telegram">
                           <Send className="w-4 h-4 text-blue-400" />
                         </div>
-                      ) : (
+                      ) : EMAIL_REGEX.test(p.email) ? (
                         <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0" title="Email">
                           <span className="text-purple-400 text-xs font-bold">@</span>
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0" title="Nome">
+                          <User className="w-4 h-4 text-green-400" />
                         </div>
                       )}
                       <div className="min-w-0">
