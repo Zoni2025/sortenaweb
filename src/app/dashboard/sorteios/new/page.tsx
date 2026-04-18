@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { AlertCircle, CircleDot, User, Users } from 'lucide-react'
+import { AlertCircle, CircleDot, User, Users, Calendar } from 'lucide-react'
 
 function slugify(text: string): string {
   return text
@@ -12,6 +12,10 @@ function slugify(text: string): string {
     .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
+}
+
+function getDataBrasilia(): string {
+  return new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 }
 
 export default function NewSorteioPage() {
@@ -24,9 +28,7 @@ export default function NewSorteioPage() {
     description: '',
     draw_type: 'roleta' as 'roleta',
     view_type: 'individual' as 'individual' | 'coletivo',
-    draw_date: '',
     max_participants: '',
-    is_public: false,
   })
   const [generatedSlug, setGeneratedSlug] = useState('')
 
@@ -63,6 +65,12 @@ export default function NewSorteioPage() {
       }
 
       const uniqueSlug = generatedSlug + '-' + Date.now().toString(36)
+
+      // Data de criação em horário de Brasília (UTC-3)
+      const now = new Date()
+      const brasiliaOffset = -3 * 60
+      const brasiliaTime = new Date(now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000)
+
       const { data, error: insertError } = await supabase
         .from('sorteios')
         .insert({
@@ -73,9 +81,9 @@ export default function NewSorteioPage() {
           status: 'draft',
           draw_type: formData.draw_type,
           view_type: formData.view_type,
-          draw_date: formData.draw_date || null,
+          draw_date: brasiliaTime.toISOString(),
           max_participants: formData.max_participants ? parseInt(formData.max_participants) : null,
-          is_public: formData.is_public,
+          is_public: true,
         })
         .select()
 
@@ -138,6 +146,18 @@ export default function NewSorteioPage() {
               </div>
             )}
 
+            {/* Data de Criação (automática) */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Data de Criação
+              </label>
+              <div className="flex items-center gap-3 px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-sm text-gray-300">
+                <Calendar className="w-4 h-4 text-purple-400" />
+                <span>{getDataBrasilia()}</span>
+                <span className="text-gray-500 text-xs">(Horário de Brasília — preenchido automaticamente)</span>
+              </div>
+            </div>
+
             {/* Tipo de Sorteio (Animação) */}
             <div>
               <label className="block text-sm font-medium mb-3">
@@ -193,7 +213,7 @@ export default function NewSorteioPage() {
                   <div>
                     <h4 className="font-semibold text-white">Individual</h4>
                     <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                      Cada participante acessa o link, insere seu e-mail e descobre seu resultado com a animação. Visualização única.
+                      Cada participante acessa o link, insere seu e-mail e descobre seu prêmio com a animação da roleta. Visualização única.
                     </p>
                   </div>
                 </button>
@@ -217,7 +237,7 @@ export default function NewSorteioPage() {
                   <div>
                     <h4 className="font-semibold text-white">Coletivo</h4>
                     <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                      O administrador controla a roleta e sorteia e-mails dos participantes. Pode girar quantas vezes quiser.
+                      O administrador acessa o link e a roleta gira com os e-mails dos participantes, revelando o ganhador. Pode sortear várias vezes.
                     </p>
                   </div>
                 </button>
@@ -239,20 +259,6 @@ export default function NewSorteioPage() {
               />
             </div>
 
-            {/* Draw Date */}
-            <div>
-              <label htmlFor="draw_date" className="block text-sm font-medium mb-2">
-                Data do Sorteio
-              </label>
-              <input
-                id="draw_date"
-                type="datetime-local"
-                value={formData.draw_date}
-                onChange={(e) => setFormData({ ...formData, draw_date: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
-              />
-            </div>
-
             {/* Max Participants */}
             <div>
               <label htmlFor="max_participants" className="block text-sm font-medium mb-2">
@@ -267,20 +273,6 @@ export default function NewSorteioPage() {
                 placeholder="Deixe em branco para sem limite"
                 className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
               />
-            </div>
-
-            {/* Is Public Toggle */}
-            <div className="flex items-center gap-3">
-              <input
-                id="is_public"
-                type="checkbox"
-                checked={formData.is_public}
-                onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
-                className="w-5 h-5 rounded border-gray-700 text-purple-600 bg-gray-800 cursor-pointer focus:ring-purple-500"
-              />
-              <label htmlFor="is_public" className="text-sm font-medium cursor-pointer">
-                Sorteio Público (pessoas podem se inscrever sem convite)
-              </label>
             </div>
 
             {/* Actions */}

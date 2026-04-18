@@ -16,7 +16,6 @@ interface SorteioPublic {
   draw_type: string
   view_type: string
   draw_date: string | null
-  is_public: boolean
 }
 
 interface PremioPublic {
@@ -63,7 +62,7 @@ export default function SorteioPublicPage() {
     try {
       const { data: sorteioData, error: sorteioError } = await supabase
         .from('sorteios')
-        .select('id, title, description, slug, status, draw_type, view_type, draw_date, is_public')
+        .select('id, title, description, slug, status, draw_type, view_type, draw_date')
         .eq('slug', slug)
         .single()
 

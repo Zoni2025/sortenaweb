@@ -75,9 +75,9 @@ export default function SorteiosPage() {
           status: 'draft',
           draw_type: sorteio.draw_type || 'roleta',
           view_type: sorteio.view_type || 'individual',
-          draw_date: sorteio.draw_date,
+          draw_date: new Date().toISOString(),
           max_participants: sorteio.max_participants,
-          is_public: sorteio.is_public,
+          is_public: true,
         })
         .select()
         .single()
@@ -238,11 +238,6 @@ export default function SorteiosPage() {
                       {sorteio.view_type === 'coletivo' ? <Users className="w-3 h-3" /> : <User className="w-3 h-3" />}
                       {sorteio.view_type === 'coletivo' ? 'Coletivo' : 'Individual'}
                     </span>
-                    {sorteio.is_public && (
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
-                        Público
-                      </span>
-                    )}
                     {sorteio.draw_date && (
                       <span className="text-xs text-gray-500">
                         {new Date(sorteio.draw_date).toLocaleDateString('pt-BR')}
