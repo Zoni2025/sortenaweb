@@ -193,7 +193,7 @@ export default function SorteioDetailPage() {
             {/* Botão Sortear — APENAS para Coletivo e Ativo */}
             {isColetivo && isAtivo && (
               <button
-                onClick={() => router.push(`/dashboard/sorteios/${id}/sortear`)}
+                onClick={() => window.open(`/dashboard/sorteios/${id}/sortear`, '_blank')}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-medium hover:from-purple-500 hover:to-pink-500 transition-all"
               >
                 <Play className="w-4 h-4" />
@@ -435,7 +435,7 @@ export default function SorteioDetailPage() {
               <p className="text-gray-400">Nenhum ganhador registrado ainda</p>
               {isColetivo && isAtivo && (
                 <button
-                  onClick={() => router.push(`/dashboard/sorteios/${id}/sortear`)}
+                  onClick={() => window.open(`/dashboard/sorteios/${id}/sortear`, '_blank')}
                   className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-medium hover:from-purple-500 hover:to-pink-500 transition-all"
                 >
                   <Play className="w-4 h-4" />
