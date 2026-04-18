@@ -23,6 +23,10 @@ import {
   Link as LinkIcon,
   Trophy,
   Clock,
+  Settings,
+  Shuffle,
+  UserCheck,
+  Search,
 } from 'lucide-react'
 
 export default function SorteioDetailPage() {
@@ -37,7 +41,7 @@ export default function SorteioDetailPage() {
   const [ganhadores, setGanhadores] = useState<Ganhador[]>([])
   const [sorteioResultados, setSorteioResultados] = useState<SorteioResultado[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'info' | 'premios' | 'participantes' | 'resultado'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'premios' | 'participantes' | 'configuracao' | 'resultado'>('info')
   const [copied, setCopied] = useState(false)
 
   // Edição inline
@@ -45,6 +49,11 @@ export default function SorteioDetailPage() {
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Configuração
+  const [configMode, setConfigMode] = useState<'random' | 'selected'>('random')
+  const [savingConfig, setSavingConfig] = useState(false)
+  const [configSearch, setConfigSearch] = useState('')
 
   useEffect(() => {
     loadData()
@@ -74,7 +83,13 @@ export default function SorteioDetailPage() {
         .eq('sorteio_id', id)
         .order('created_at', { ascending: false })
 
-      if (participantesData) setParticipantes(participantesData)
+      if (participantesData) {
+        setParticipantes(participantesData)
+        // Detectar modo: se algum participante aprovado não é elegível, modo = selected
+        const approved = participantesData.filter((p: Participante) => p.status === 'approved')
+        const hasIneligible = approved.some((p: Participante) => p.eligible === false)
+        setConfigMode(hasIneligible ? 'selected' : 'random')
+      }
 
       const { data: ganhadoresData } = await supabase
         .from('ganhadores')
@@ -180,6 +195,53 @@ export default function SorteioDetailPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Configuração: marcar todos como elegíveis
+  async function setAllEligible() {
+    setSavingConfig(true)
+    try {
+      const approvedIds = participantes.filter(p => p.status === 'approved').map(p => p.id)
+      if (approvedIds.length === 0) return
+
+      const { error } = await supabase
+        .from('participantes')
+        .update({ eligible: true })
+        .eq('sorteio_id', id)
+        .eq('status', 'approved')
+
+      if (error) throw error
+      setParticipantes(prev => prev.map(p => p.status === 'approved' ? { ...p, eligible: true } : p))
+      setConfigMode('random')
+    } catch (err) {
+      console.error('Error setting all eligible:', err)
+      alert('Erro ao atualizar configuração')
+    } finally {
+      setSavingConfig(false)
+    }
+  }
+
+  // Configuração: alternar elegibilidade de um participante
+  async function toggleEligible(participanteId: string, currentEligible: boolean) {
+    try {
+      const { error } = await supabase
+        .from('participantes')
+        .update({ eligible: !currentEligible })
+        .eq('id', participanteId)
+
+      if (error) throw error
+      setParticipantes(prev =>
+        prev.map(p => p.id === participanteId ? { ...p, eligible: !currentEligible } : p)
+      )
+    } catch (err) {
+      console.error('Error toggling eligible:', err)
+      alert('Erro ao atualizar participante')
+    }
+  }
+
+  // Configuração: mudar para modo seleção
+  function switchToSelected() {
+    setConfigMode('selected')
   }
 
   if (loading) {
@@ -333,12 +395,12 @@ export default function SorteioDetailPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-gray-800 mb-6">
-        {(['info', 'premios', 'participantes', 'resultado'] as const).map((tab) => (
+      <div className="flex gap-4 border-b border-gray-800 mb-6 overflow-x-auto">
+        {(['info', 'premios', 'participantes', 'configuracao', 'resultado'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-3 font-medium transition-colors border-b-2 ${
+            className={`px-4 py-3 font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === tab
                 ? 'border-purple-500 text-purple-400'
                 : 'border-transparent text-gray-400 hover:text-gray-300'
@@ -347,6 +409,7 @@ export default function SorteioDetailPage() {
             {tab === 'info' && 'Informações'}
             {tab === 'premios' && 'Prêmios'}
             {tab === 'participantes' && 'Participantes'}
+            {tab === 'configuracao' && 'Configuração'}
             {tab === 'resultado' && 'Resultado'}
           </button>
         ))}
@@ -546,6 +609,190 @@ export default function SorteioDetailPage() {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'configuracao' && (
+        <div className="space-y-6">
+          {/* Modo de seleção */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-gray-400" />
+              Elegibilidade dos Participantes
+            </h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Defina quais participantes podem ser sorteados na roleta.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Card Aleatório */}
+              <button
+                onClick={setAllEligible}
+                disabled={savingConfig}
+                className={`relative p-5 rounded-xl border-2 text-left transition-all ${
+                  configMode === 'random'
+                    ? 'border-green-500/50 bg-green-500/10'
+                    : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                }`}
+              >
+                {configMode === 'random' && (
+                  <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <Shuffle className="w-8 h-8 text-green-400 mb-3" />
+                <h4 className="font-semibold text-white mb-1">Aleatório</h4>
+                <p className="text-xs text-gray-400">
+                  Todos os participantes aprovados são elegíveis. O resultado é 100% aleatório.
+                </p>
+              </button>
+
+              {/* Card Selecionar */}
+              <button
+                onClick={switchToSelected}
+                className={`relative p-5 rounded-xl border-2 text-left transition-all ${
+                  configMode === 'selected'
+                    ? 'border-purple-500/50 bg-purple-500/10'
+                    : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                }`}
+              >
+                {configMode === 'selected' && (
+                  <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <UserCheck className="w-8 h-8 text-purple-400 mb-3" />
+                <h4 className="font-semibold text-white mb-1">Selecionar Elegíveis</h4>
+                <p className="text-xs text-gray-400">
+                  Escolha quais participantes podem ganhar. O sorteio será aleatório entre os selecionados.
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Lista de participantes para seleção */}
+          {configMode === 'selected' && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-purple-400" />
+                  Participantes Elegíveis
+                </h3>
+                <span className="text-sm text-gray-400">
+                  {participantes.filter(p => p.status === 'approved' && p.eligible).length} de{' '}
+                  {participantes.filter(p => p.status === 'approved').length} selecionado(s)
+                </span>
+              </div>
+
+              {/* Busca */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  type="text"
+                  value={configSearch}
+                  onChange={(e) => setConfigSearch(e.target.value)}
+                  placeholder="Buscar participante..."
+                  className="w-full pl-10 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                />
+              </div>
+
+              {/* Ações rápidas */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={async () => {
+                    setSavingConfig(true)
+                    try {
+                      const { error } = await supabase
+                        .from('participantes')
+                        .update({ eligible: true })
+                        .eq('sorteio_id', id)
+                        .eq('status', 'approved')
+                      if (error) throw error
+                      setParticipantes(prev => prev.map(p => p.status === 'approved' ? { ...p, eligible: true } : p))
+                    } catch { alert('Erro ao atualizar') }
+                    finally { setSavingConfig(false) }
+                  }}
+                  disabled={savingConfig}
+                  className="px-3 py-1.5 text-xs font-medium bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-gray-300 transition-colors disabled:opacity-50"
+                >
+                  Selecionar Todos
+                </button>
+                <button
+                  onClick={async () => {
+                    setSavingConfig(true)
+                    try {
+                      const { error } = await supabase
+                        .from('participantes')
+                        .update({ eligible: false })
+                        .eq('sorteio_id', id)
+                        .eq('status', 'approved')
+                      if (error) throw error
+                      setParticipantes(prev => prev.map(p => p.status === 'approved' ? { ...p, eligible: false } : p))
+                    } catch { alert('Erro ao atualizar') }
+                    finally { setSavingConfig(false) }
+                  }}
+                  disabled={savingConfig}
+                  className="px-3 py-1.5 text-xs font-medium bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-gray-300 transition-colors disabled:opacity-50"
+                >
+                  Desmarcar Todos
+                </button>
+              </div>
+
+              {/* Lista */}
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {participantes
+                  .filter(p => p.status === 'approved')
+                  .filter(p => {
+                    if (!configSearch.trim()) return true
+                    const search = configSearch.toLowerCase()
+                    return (
+                      p.email.toLowerCase().includes(search) ||
+                      (p.name && p.name.toLowerCase().includes(search))
+                    )
+                  })
+                  .map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => toggleEligible(p.id, p.eligible)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                        p.eligible
+                          ? 'border-green-500/30 bg-green-500/5 hover:bg-green-500/10'
+                          : 'border-gray-800 bg-gray-800/30 hover:bg-gray-800/50 opacity-60'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        p.eligible
+                          ? 'border-green-500 bg-green-500'
+                          : 'border-gray-600 bg-transparent'
+                      }`}>
+                        {p.eligible && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {p.name || p.email}
+                        </p>
+                        {p.name && (
+                          <p className="text-xs text-gray-500 truncate">{p.email}</p>
+                        )}
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        p.eligible
+                          ? 'bg-green-500/20 text-green-400'
+                          : 'bg-gray-700 text-gray-500'
+                      }`}>
+                        {p.eligible ? 'Elegível' : 'Inelegível'}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+
+              {participantes.filter(p => p.status === 'approved').length === 0 && (
+                <p className="text-gray-500 text-sm text-center py-6">
+                  Nenhum participante aprovado neste sorteio.
+                </p>
+              )}
             </div>
           )}
         </div>

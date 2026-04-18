@@ -44,6 +44,7 @@ export interface Participante {
   name: string | null
   phone: string | null
   status: 'pending' | 'approved' | 'rejected'
+  eligible: boolean
   created_at: string
 }
 

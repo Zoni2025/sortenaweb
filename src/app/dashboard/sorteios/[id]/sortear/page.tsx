@@ -67,6 +67,7 @@ export default function SortearPage() {
         .select('*')
         .eq('sorteio_id', id)
         .eq('status', 'approved')
+        .eq('eligible', true)
 
       if (participantesData && participantesData.length > 0) {
         setParticipantes(participantesData)
