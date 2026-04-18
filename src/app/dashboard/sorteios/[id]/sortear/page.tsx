@@ -172,14 +172,6 @@ export default function SortearPage() {
           <Users className="w-4 h-4" />
           <span>{participantes.length} participante(s)</span>
         </div>
-        {eligibleIndices.length > 0 && (
-          <div className="mt-2 flex items-center justify-center gap-2 text-xs">
-            <Sparkles className="w-3 h-3 text-yellow-400" />
-            <span className="text-yellow-400">
-              Modo elegíveis: {eligibleIndices.length} de {participantes.length} podem ganhar
-            </span>
-          </div>
-        )}
       </div>
 
       {participantes.length === 0 ? (

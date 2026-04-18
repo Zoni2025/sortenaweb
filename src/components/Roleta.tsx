@@ -50,6 +50,35 @@ function playWinSound(audioCtx: AudioContext) {
   } catch {}
 }
 
+/**
+ * Dado a rotação atual da roleta, retorna o índice do item sob o ponteiro (topo).
+ * O ponteiro fica no ângulo -π/2 no canvas.
+ */
+function getSliceAtPointer(rot: number, numItems: number, sliceAngle: number): number {
+  if (numItems === 0) return -1
+  // O ponteiro está fixo em -π/2.
+  // A fatia i ocupa de (rot + i*sliceAngle) até (rot + (i+1)*sliceAngle).
+  // Queremos achar i tal que rot + i*sliceAngle <= -π/2 < rot + (i+1)*sliceAngle
+  // => i*sliceAngle <= -π/2 - rot < (i+1)*sliceAngle
+  // => i <= (-π/2 - rot) / sliceAngle < i+1
+  // => i = floor((-π/2 - rot) / sliceAngle)
+  // Normalizar para [0, numItems)
+  let raw = (-Math.PI / 2 - rot) / sliceAngle
+  let idx = Math.floor(raw) % numItems
+  if (idx < 0) idx += numItems
+  return idx
+}
+
+/**
+ * Calcula a rotação necessária para que o centro da fatia `idx` fique alinhado ao ponteiro.
+ */
+function getRotationForIndex(idx: number, sliceAngle: number): number {
+  // Queremos que o centro da fatia idx fique em -π/2:
+  // rot + idx * sliceAngle + sliceAngle/2 = -π/2
+  // rot = -π/2 - idx * sliceAngle - sliceAngle/2
+  return -Math.PI / 2 - idx * sliceAngle - sliceAngle / 2
+}
+
 export default function Roleta({ items, onResult, size = 400, disabled = false, targetIndex, eligibleIndices = [] }: RoletaProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isSpinning, setIsSpinning] = useState(false)
@@ -60,15 +89,6 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
 
   const numItems = items.length
   const sliceAngle = numItems > 0 ? (2 * Math.PI) / numItems : 0
-
-  const getSliceAtPointer = useCallback((rot: number): number => {
-    if (numItems === 0) return -1
-    // Ponteiro no topo = ângulo -π/2
-    // Normalizar (-π/2 - rot) para [0, 2π)
-    let angle = (-Math.PI / 2 - rot) % (2 * Math.PI)
-    if (angle < 0) angle += 2 * Math.PI
-    return Math.floor(angle / sliceAngle) % numItems
-  }, [numItems, sliceAngle])
 
   const drawWheel = useCallback((ctx: CanvasRenderingContext2D, rot: number) => {
     const cx = size / 2
@@ -103,31 +123,15 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       ctx.lineWidth = 2
       ctx.stroke()
 
-      // Indicador de elegível (borda dourada)
-      if (eligibleIndices && eligibleIndices.length > 0 && eligibleIndices.includes(i)) {
-        ctx.beginPath()
-        ctx.moveTo(cx, cy)
-        ctx.arc(cx, cy, r, start, end)
-        ctx.closePath()
-        ctx.strokeStyle = '#facc15'
-        ctx.lineWidth = 4
-        ctx.stroke()
-      }
-
       // Texto
       ctx.save()
       ctx.translate(cx, cy)
       ctx.rotate(start + sliceAngle / 2)
       ctx.fillStyle = '#fff'
-      const fontSize = Math.max(10, Math.min(14, 200 / numItems))
-      ctx.font = `bold ${fontSize}px sans-serif`
+      ctx.font = `bold ${Math.max(10, Math.min(14, 200 / numItems))}px sans-serif`
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
-      let text = item.length > 20 ? item.substring(0, 18) + '..' : item
-      // Adicionar ★ para elegíveis
-      if (eligibleIndices && eligibleIndices.length > 0 && eligibleIndices.includes(i)) {
-        text = '★ ' + text
-      }
+      const text = item.length > 20 ? item.substring(0, 18) + '..' : item
       ctx.fillText(text, r - 20, 0)
       ctx.restore()
     })
@@ -152,7 +156,7 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
     ctx.strokeStyle = '#fff'
     ctx.lineWidth = 2
     ctx.stroke()
-  }, [items, size, numItems, sliceAngle, eligibleIndices])
+  }, [items, size, numItems, sliceAngle])
 
   // Desenhar sempre que items mudar (inicial)
   useEffect(() => {
@@ -173,33 +177,26 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
     setIsSpinning(true)
     lastSliceRef.current = -1
 
-    // Decidir resultado
+    // ===== DECIDIR RESULTADO =====
     let resultIndex: number
-    console.log('[Roleta] eligibleIndices recebido:', eligibleIndices)
-    console.log('[Roleta] numItems:', numItems)
-
     if (eligibleIndices && eligibleIndices.length > 0) {
-      // Modo elegíveis: sortear aleatoriamente ENTRE os elegíveis
       resultIndex = eligibleIndices[Math.floor(Math.random() * eligibleIndices.length)]
-      console.log('[Roleta] MODO ELEGÍVEIS → resultIndex:', resultIndex, '→', items[resultIndex])
     } else if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < numItems) {
       resultIndex = targetIndex
-      console.log('[Roleta] MODO TARGET → resultIndex:', resultIndex)
     } else {
-      // Modo aleatório: qualquer participante
       resultIndex = Math.floor(Math.random() * numItems)
-      console.log('[Roleta] MODO ALEATÓRIO → resultIndex:', resultIndex, '→', items[resultIndex])
     }
 
-    // Ângulo alvo: centro da fatia resultIndex alinhado ao ponteiro (-π/2)
-    const exactTargetRot = -Math.PI / 2 - resultIndex * sliceAngle - sliceAngle / 2
+    // ===== CALCULAR ROTAÇÃO ALVO =====
+    const targetRot = getRotationForIndex(resultIndex, sliceAngle)
 
-    // Voltas extras (sempre girar bastante para frente)
+    // Garantir que giramos PARA FRENTE (sentido horário = ângulo diminui)
+    // e fazemos várias voltas completas
     const fullSpins = (6 + Math.random() * 3) * 2 * Math.PI
-
-    // Calcular rotação final absoluta
-    let finalRot = exactTargetRot
-    while (finalRot > rotationRef.current) finalRot -= 2 * Math.PI
+    let finalRot = targetRot
+    // Garantir que finalRot está abaixo da rotação atual
+    while (finalRot >= rotationRef.current) finalRot -= 2 * Math.PI
+    // Adicionar voltas extras
     finalRot -= fullSpins
 
     const startRot = rotationRef.current
@@ -212,12 +209,7 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       const progress = Math.min(elapsed / duration, 1)
       const eased = 1 - Math.pow(1 - progress, 4)
 
-      let current = startRot + totalDelta * eased
-
-      // No frame final, forçar rotação exata para eliminar erro de ponto flutuante
-      if (progress >= 1) {
-        current = exactTargetRot
-      }
+      const current = startRot + totalDelta * eased
 
       rotationRef.current = current
 
@@ -229,7 +221,7 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       }
 
       // Som tick
-      const slice = getSliceAtPointer(current)
+      const slice = getSliceAtPointer(current, numItems, sliceAngle)
       if (slice !== lastSliceRef.current && audioCtxRef.current) {
         lastSliceRef.current = slice
         playTick(audioCtxRef.current, 0.15 + 0.2 * (1 - progress))
@@ -238,12 +230,27 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate)
       } else {
-        setIsSpinning(false)
+        // ===== ANIMAÇÃO TERMINOU =====
+        // Forçar rotação exata no target para eliminar erro de ponto flutuante
+        rotationRef.current = targetRot
 
+        // Redesenhar na posição exata
+        const canvas2 = canvasRef.current
+        if (canvas2) {
+          const ctx2 = canvas2.getContext('2d')
+          if (ctx2) drawWheel(ctx2, targetRot)
+        }
+
+        // Ler o que está VISUALMENTE sob o ponteiro — isso é a verdade visual
+        const visualIndex = getSliceAtPointer(targetRot, numItems, sliceAngle)
+
+        setIsSpinning(false)
         if (audioCtxRef.current) playWinSound(audioCtxRef.current)
 
-        // Resultado garantido: o resultIndex que foi calculado
-        if (onResult) onResult(items[resultIndex], resultIndex)
+        // Reportar o item que está VISUALMENTE sob o ponteiro
+        if (onResult && visualIndex >= 0 && visualIndex < numItems) {
+          onResult(items[visualIndex], visualIndex)
+        }
       }
     }
 
