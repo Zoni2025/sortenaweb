@@ -25,7 +25,8 @@ export default function SortearPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [roletaEmails, setRoletaEmails] = useState<string[]>([])
-  const [eligibleIndices, setEligibleIndices] = useState<number[]>([])
+  const [baseEligibleIndices, setBaseEligibleIndices] = useState<number[]>([])
+  const [ultimoSorteadoIndex, setUltimoSorteadoIndex] = useState<number | null>(null)
   const [ultimoSorteado, setUltimoSorteado] = useState<string | null>(null)
   const [showPopup, setShowPopup] = useState(false)
   const [historico, setHistorico] = useState<SorteadoHistorico[]>([])
@@ -85,7 +86,7 @@ export default function SortearPage() {
             .filter(i => i !== -1)
         }
 
-        setEligibleIndices(indices)
+        setBaseEligibleIndices(indices)
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -95,8 +96,9 @@ export default function SortearPage() {
     }
   }
 
-  async function handleRoletaResult(email: string) {
+  async function handleRoletaResult(email: string, index: number) {
     setUltimoSorteado(email)
+    setUltimoSorteadoIndex(index)
     const participante = participantes.find(p => p.email === email)
     const name = participante?.name || null
     const timestamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
@@ -177,7 +179,12 @@ export default function SortearPage() {
             items={roletaEmails}
             onResult={handleRoletaResult}
             size={420}
-            eligibleIndices={eligibleIndices}
+            eligibleIndices={
+              // Se tem elegíveis configurados e mais de 1, excluir o último sorteado para não repetir em sequência
+              baseEligibleIndices.length > 1 && ultimoSorteadoIndex !== null
+                ? baseEligibleIndices.filter(i => i !== ultimoSorteadoIndex)
+                : baseEligibleIndices
+            }
           />
 
           {/* Histórico de Ganhadores */}
