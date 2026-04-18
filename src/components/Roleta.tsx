@@ -8,6 +8,7 @@ interface RoletaProps {
   size?: number
   disabled?: boolean
   targetIndex?: number
+  eligibleIndices?: number[]
 }
 
 const COLORS = [
@@ -49,7 +50,7 @@ function playWinSound(audioCtx: AudioContext) {
   } catch {}
 }
 
-export default function Roleta({ items, onResult, size = 400, disabled = false, targetIndex }: RoletaProps) {
+export default function Roleta({ items, onResult, size = 400, disabled = false, targetIndex, eligibleIndices }: RoletaProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isSpinning, setIsSpinning] = useState(false)
   const animationRef = useRef<number | null>(null)
@@ -156,11 +157,15 @@ export default function Roleta({ items, onResult, size = 400, disabled = false, 
     setIsSpinning(true)
     lastSliceRef.current = -1
 
-    // Resultado aleatório
+    // Decidir resultado
     let resultIndex: number
-    if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < numItems) {
+    if (eligibleIndices && eligibleIndices.length > 0) {
+      // Modo elegíveis: sortear aleatoriamente ENTRE os elegíveis
+      resultIndex = eligibleIndices[Math.floor(Math.random() * eligibleIndices.length)]
+    } else if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < numItems) {
       resultIndex = targetIndex
     } else {
+      // Modo aleatório: qualquer participante
       resultIndex = Math.floor(Math.random() * numItems)
     }
 
