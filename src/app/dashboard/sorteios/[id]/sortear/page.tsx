@@ -25,6 +25,8 @@ export default function SortearPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [roletaEmails, setRoletaEmails] = useState<string[]>([])
+  const [eligibleIndices, setEligibleIndices] = useState<number[]>([])
+  const [targetIndex, setTargetIndex] = useState<number | undefined>(undefined)
   const [ultimoSorteado, setUltimoSorteado] = useState<string | null>(null)
   const [showPopup, setShowPopup] = useState(false)
   const [historico, setHistorico] = useState<SorteadoHistorico[]>([])
@@ -62,16 +64,29 @@ export default function SortearPage() {
 
       setSorteio(sorteioData)
 
+      // Carregar TODOS os aprovados para exibir na roleta
       const { data: participantesData } = await supabase
         .from('participantes')
         .select('*')
         .eq('sorteio_id', id)
         .eq('status', 'approved')
-        .eq('eligible', true)
 
       if (participantesData && participantesData.length > 0) {
         setParticipantes(participantesData)
-        setRoletaEmails(participantesData.map(p => p.email))
+        const emails = participantesData.map(p => p.email)
+        setRoletaEmails(emails)
+
+        // Índices dos elegíveis (para forçar resultado)
+        const indices = participantesData
+          .map((p, i) => p.eligible ? i : -1)
+          .filter(i => i !== -1)
+
+        // Se nenhum elegível, todos são elegíveis (fallback)
+        setEligibleIndices(indices.length > 0 ? indices : emails.map((_, i) => i))
+
+        // Sortear um elegível aleatório como alvo
+        const pool = indices.length > 0 ? indices : emails.map((_, i) => i)
+        setTargetIndex(pool[Math.floor(Math.random() * pool.length)])
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -109,6 +124,8 @@ export default function SortearPage() {
   function girarNovamente() {
     setShowPopup(false)
     setUltimoSorteado(null)
+    // Sortear novo alvo elegível para o próximo giro
+    setTargetIndex(eligibleIndices[Math.floor(Math.random() * eligibleIndices.length)])
     setSorteioKey(prev => prev + 1)
   }
 
@@ -163,6 +180,7 @@ export default function SortearPage() {
             items={roletaEmails}
             onResult={handleRoletaResult}
             size={420}
+            targetIndex={targetIndex}
           />
 
           {/* Histórico de Ganhadores */}
