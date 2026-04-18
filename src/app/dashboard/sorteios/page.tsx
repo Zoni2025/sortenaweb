@@ -11,7 +11,7 @@ export default function SorteiosPage() {
   const [filteredSorteios, setFilteredSorteios] = useState<Sorteio[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'active' | 'finished' | 'cancelled'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'finished'>('all')
   const supabase = createClient()
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function SorteiosPage() {
           title: sorteio.title + ' (Cópia)',
           description: sorteio.description,
           slug: uniqueSlug,
-          status: 'draft',
+          status: 'active',
           draw_type: sorteio.draw_type || 'roleta',
           view_type: sorteio.view_type || 'individual',
           draw_date: new Date().toISOString(),
@@ -131,10 +131,8 @@ export default function SorteiosPage() {
   }
 
   const statusLabels: Record<string, { label: string; color: string }> = {
-    draft: { label: 'Rascunho', color: 'bg-gray-500/20 text-gray-400' },
     active: { label: 'Ativo', color: 'bg-green-500/20 text-green-400' },
-    finished: { label: 'Finalizado', color: 'bg-blue-500/20 text-blue-400' },
-    cancelled: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400' },
+    finished: { label: 'Encerrado', color: 'bg-gray-500/20 text-gray-400' },
   }
 
   if (loading) {
@@ -180,10 +178,8 @@ export default function SorteiosPage() {
             className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
           >
             <option value="all">Todos os Status</option>
-            <option value="draft">Rascunho</option>
             <option value="active">Ativo</option>
-            <option value="finished">Finalizado</option>
-            <option value="cancelled">Cancelado</option>
+            <option value="finished">Encerrado</option>
           </select>
         </div>
       </div>

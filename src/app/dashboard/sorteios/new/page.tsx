@@ -78,7 +78,7 @@ export default function NewSorteioPage() {
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           slug: uniqueSlug,
-          status: 'draft',
+          status: 'active',
           draw_type: formData.draw_type,
           view_type: formData.view_type,
           draw_date: brasiliaTime.toISOString(),
